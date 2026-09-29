@@ -40,4 +40,11 @@ class ExampleRobolectricTest {
     assertEquals(android.content.Intent.ACTION_DIAL, intent.action)
     assertEquals("tel:1900545566", intent.data.toString())
   }
+
+  @Test
+  fun `rescue map location holds correct coordinates without google maps dependency`() {
+    val location = com.example.ui.components.RescueMapLocation(21.0285, 105.8542)
+    assertEquals(21.0285, location.latitude, 0.0001)
+    assertEquals(105.8542, location.longitude, 0.0001)
+  }
 }

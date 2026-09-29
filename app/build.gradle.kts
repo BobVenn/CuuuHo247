@@ -103,6 +103,7 @@ dependencies {
   implementation(libs.firebase.database)
   implementation(libs.firebase.auth)
   implementation(libs.play.services.location)
+  // implementation(libs.play.services.maps) // Switched to OpenStreetMap & Leaflet.js
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

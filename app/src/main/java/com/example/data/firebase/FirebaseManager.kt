@@ -1,5 +1,6 @@
 package com.example.data.firebase
 
+import android.util.Log
 import com.example.data.config.AppConfig
 import com.example.data.model.*
 import com.google.firebase.auth.FirebaseAuth
@@ -12,18 +13,9 @@ import kotlinx.coroutines.tasks.await
 
 class FirebaseManager private constructor() {
 
-    val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
-    // Explicitly connect to the project's Realtime Database URL
-    val database: FirebaseDatabase = FirebaseDatabase.getInstance(AppConfig.FIREBASE_DATABASE_URL)
-
-    val requestsRef: DatabaseReference = database.getReference("requests")
-    val chatsRef: DatabaseReference = database.getReference("chats")
-    val ratingsRef: DatabaseReference = database.getReference("ratings")
-    val reportsRef: DatabaseReference = database.getReference("reports")
-    val usersRef: DatabaseReference = database.getReference("users")
-
     companion object {
+        private const val TAG = "FirebaseManager"
+
         @Volatile
         private var INSTANCE: FirebaseManager? = null
 
@@ -36,6 +28,29 @@ class FirebaseManager private constructor() {
         }
     }
 
+    val auth: FirebaseAuth = try {
+        FirebaseAuth.getInstance()
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to get FirebaseAuth instance: ${e.message}", e)
+        throw e
+    }
+
+    // Explicitly connect to the project's Realtime Database URL
+    val database: FirebaseDatabase = try {
+        FirebaseDatabase.getInstance(AppConfig.FIREBASE_DATABASE_URL).apply {
+            Log.i(TAG, "FirebaseDatabase instance connected to ${AppConfig.FIREBASE_DATABASE_URL}")
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to get FirebaseDatabase instance: ${e.message}", e)
+        FirebaseDatabase.getInstance()
+    }
+
+    val requestsRef: DatabaseReference = database.getReference("requests")
+    val chatsRef: DatabaseReference = database.getReference("chats")
+    val ratingsRef: DatabaseReference = database.getReference("ratings")
+    val reportsRef: DatabaseReference = database.getReference("reports")
+    val usersRef: DatabaseReference = database.getReference("users")
+
     // -------------------------------------------------------------
     // AUTHENTICATION
     // -------------------------------------------------------------
@@ -45,6 +60,7 @@ class FirebaseManager private constructor() {
 
     fun getAuthStateFlow(): Flow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth ->
+            Log.d(TAG, "AuthState changed: user=${auth.currentUser?.uid}")
             trySend(auth.currentUser)
         }
         auth.addAuthStateListener(listener)
@@ -53,10 +69,13 @@ class FirebaseManager private constructor() {
 
     suspend fun signIn(email: String, pass: String): Result<FirebaseUser> {
         return try {
+            Log.i(TAG, "Attempting signIn for $email")
             val result = auth.signInWithEmailAndPassword(email.trim(), pass).await()
             val user = result.user ?: throw Exception("Không thể lấy thông tin người dùng")
+            Log.i(TAG, "signIn successful: ${user.uid}")
             Result.success(user)
         } catch (e: Exception) {
+            Log.e(TAG, "signIn failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -71,6 +90,7 @@ class FirebaseManager private constructor() {
         licensePlate: String
     ): Result<FirebaseUser> {
         return try {
+            Log.i(TAG, "Attempting signUp for $email")
             val result = auth.createUserWithEmailAndPassword(email.trim(), pass).await()
             val user = result.user ?: throw Exception("Không thể tạo tài khoản")
 
@@ -86,10 +106,16 @@ class FirebaseManager private constructor() {
                 licensePlate = licensePlate.trim(),
                 createdAt = System.currentTimeMillis()
             )
-            usersRef.child(user.uid).setValue(profile.toMap()).await()
+            try {
+                usersRef.child(user.uid).setValue(profile.toMap()).await()
+                Log.i(TAG, "Profile saved to database for ${user.uid}")
+            } catch (dbErr: Exception) {
+                Log.e(TAG, "Failed to save profile to Realtime Database: ${dbErr.message}", dbErr)
+            }
 
             Result.success(user)
         } catch (e: Exception) {
+            Log.e(TAG, "signUp failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -99,11 +125,13 @@ class FirebaseManager private constructor() {
             auth.sendPasswordResetEmail(email.trim()).await()
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "sendPasswordReset failed: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     fun signOut() {
+        Log.i(TAG, "Signing out user ${auth.currentUser?.uid}")
         auth.signOut()
     }
 
@@ -144,7 +172,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getUserProfileFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(null)
+                close()
             }
         }
 
@@ -158,6 +188,7 @@ class FirebaseManager private constructor() {
             usersRef.child(profile.uid).updateChildren(profile.toMap()).await()
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "updateUserProfile failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -182,7 +213,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getAllRequestsFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(emptyList())
+                close()
             }
         }
 
@@ -206,7 +239,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getUserRequestsFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(emptyList())
+                close()
             }
         }
 
@@ -223,7 +258,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getRequestByIdFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(null)
+                close()
             }
         }
 
@@ -236,8 +273,10 @@ class FirebaseManager private constructor() {
             val key = requestsRef.push().key ?: throw Exception("Không thể tạo ID cho yêu cầu")
             val fullRequest = request.copy(id = key, timestamp = System.currentTimeMillis())
             requestsRef.child(key).setValue(fullRequest.toMap()).await()
+            Log.i(TAG, "createRescueRequest successful: $key")
             Result.success(key)
         } catch (e: Exception) {
+            Log.e(TAG, "createRescueRequest failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -258,8 +297,10 @@ class FirebaseManager private constructor() {
             if (cost != null) updates["cost"] = cost
 
             requestsRef.child(requestId).updateChildren(updates).await()
+            Log.i(TAG, "updateRequestStatus successful for $requestId to $status")
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "updateRequestStatus failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -268,8 +309,10 @@ class FirebaseManager private constructor() {
         return try {
             val updates = mapOf<String, Any?>("status" to AppConfig.RequestStatus.CANCELLED)
             requestsRef.child(requestId).updateChildren(updates).await()
+            Log.i(TAG, "cancelRequest successful for $requestId")
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "cancelRequest failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -381,7 +424,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getChatMessagesFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(emptyList())
+                close()
             }
         }
 
@@ -395,8 +440,10 @@ class FirebaseManager private constructor() {
             val key = ref.push().key ?: throw Exception("Không thể tạo ID tin nhắn")
             val fullMsg = message.copy(id = key, timestamp = System.currentTimeMillis())
             ref.child(key).setValue(fullMsg.toMap()).await()
+            Log.i(TAG, "sendChatMessage successful: $key")
             Result.success(key)
         } catch (e: Exception) {
+            Log.e(TAG, "sendChatMessage failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -431,7 +478,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getUserRatingsFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(emptyList())
+                close()
             }
         }
 
@@ -455,8 +504,10 @@ class FirebaseManager private constructor() {
                 ).await()
             }
 
+            Log.i(TAG, "createRating successful: $key")
             Result.success(key)
         } catch (e: Exception) {
+            Log.e(TAG, "createRating failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -491,7 +542,9 @@ class FirebaseManager private constructor() {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                close(error.toException())
+                Log.e(TAG, "getUserReportsFlow onCancelled [code=${error.code}]: ${error.message} - ${error.details}")
+                trySend(emptyList())
+                close()
             }
         }
 
@@ -504,8 +557,10 @@ class FirebaseManager private constructor() {
             val key = reportsRef.push().key ?: throw Exception("Không thể tạo ID báo cáo")
             val fullReport = report.copy(id = key, timestamp = System.currentTimeMillis())
             reportsRef.child(key).setValue(fullReport.toMap()).await()
+            Log.i(TAG, "createReport successful: $key")
             Result.success(key)
         } catch (e: Exception) {
+            Log.e(TAG, "createReport failed: ${e.message}", e)
             Result.failure(e)
         }
     }

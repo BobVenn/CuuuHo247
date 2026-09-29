@@ -47,9 +47,9 @@ class MainActivity : ComponentActivity() {
 
 enum class MainNavTab(val title: String) {
     HOME("Trang chủ"),
+    SERVICES("Dịch vụ"),
     HISTORY("Lịch sử"),
     STAFF("Điều phối"),
-    REPORTS("Báo cáo"),
     PROFILE("Cá nhân")
 }
 
@@ -57,6 +57,7 @@ sealed class AppScreen {
     object MainTabs : AppScreen()
     data class RequestDetail(val request: RescueRequest) : AppScreen()
     data class Chat(val request: RescueRequest) : AppScreen()
+    object Reports : AppScreen()
 }
 
 @Composable
@@ -189,6 +190,28 @@ fun MainAppHost(
             return
         }
 
+        is AppScreen.Reports -> {
+            BackHandler {
+                currentScreen = AppScreen.MainTabs
+            }
+            ReportsScreen(
+                userProfile = userProfile,
+                reports = userReports,
+                onBack = { currentScreen = AppScreen.MainTabs },
+                onSubmitReport = { type, content ->
+                    userProfile?.let {
+                        rescueViewModel.submitReport(
+                            requestId = null,
+                            reportType = type,
+                            content = content,
+                            userProfile = it
+                        )
+                    }
+                }
+            )
+            return
+        }
+
         AppScreen.MainTabs -> {
             // Main Bottom Navigation Flow
             val isStaffOrAdmin = userProfile?.role == AppConfig.UserRole.STAFF ||
@@ -227,6 +250,25 @@ fun MainAppHost(
                                     MainNavTab.HOME.title,
                                     fontSize = 11.sp,
                                     fontWeight = if (currentTab == MainNavTab.HOME) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        )
+
+                        // Services Tab (Featuring Google Maps + Streamlined One-Tap Booking)
+                        NavigationBarItem(
+                            selected = currentTab == MainNavTab.SERVICES,
+                            onClick = { currentTab = MainNavTab.SERVICES },
+                            icon = {
+                                Icon(
+                                    imageVector = if (currentTab == MainNavTab.SERVICES) Icons.Filled.Build else Icons.Outlined.Build,
+                                    contentDescription = "Dịch vụ"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    MainNavTab.SERVICES.title,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (currentTab == MainNavTab.SERVICES) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         )
@@ -279,25 +321,6 @@ fun MainAppHost(
                                 }
                             )
                         }
-
-                        // Reports Tab
-                        NavigationBarItem(
-                            selected = currentTab == MainNavTab.REPORTS,
-                            onClick = { currentTab = MainNavTab.REPORTS },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentTab == MainNavTab.REPORTS) Icons.Filled.Feedback else Icons.Outlined.Feedback,
-                                    contentDescription = "Báo cáo"
-                                )
-                            },
-                            label = {
-                                Text(
-                                    MainNavTab.REPORTS.title,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (currentTab == MainNavTab.REPORTS) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        )
 
                         // Profile Tab
                         NavigationBarItem(
@@ -358,7 +381,7 @@ fun MainAppHost(
                                     currentScreen = AppScreen.RequestDetail(req)
                                 },
                                 onNavigateToHistory = { currentTab = MainNavTab.HISTORY },
-                                onNavigateToReports = { currentTab = MainNavTab.REPORTS },
+                                onNavigateToReports = { currentTab = MainNavTab.PROFILE },
                                 onShareLocation = {
                                     rescueViewModel.shareLocation(
                                         context,
@@ -366,6 +389,33 @@ fun MainAppHost(
                                         currentLocation.latitude,
                                         currentLocation.longitude
                                     )
+                                }
+                            )
+                        }
+
+                        MainNavTab.SERVICES -> {
+                            ServicesScreen(
+                                userProfile = userProfile,
+                                currentLocation = currentLocation,
+                                onCallPhone = { phone -> rescueViewModel.triggerEmergencySosDialer(context, phone) },
+                                onSubmitRequest = { issue, desc, vType, plate ->
+                                    userProfile?.let { prof ->
+                                        rescueViewModel.createRescueRequest(
+                                            userProfile = prof,
+                                            issueType = issue,
+                                            description = desc,
+                                            vehicleType = vType,
+                                            licensePlate = plate,
+                                            onSuccess = { reqId ->
+                                                val createdReq = userRequests.find { it.id == reqId }
+                                                if (createdReq != null) {
+                                                    currentScreen = AppScreen.RequestDetail(createdReq)
+                                                } else {
+                                                    currentTab = MainNavTab.HOME
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             )
                         }
@@ -392,24 +442,6 @@ fun MainAppHost(
                             )
                         }
 
-                        MainNavTab.REPORTS -> {
-                            ReportsScreen(
-                                userProfile = userProfile,
-                                reports = userReports,
-                                onBack = { currentTab = MainNavTab.HOME },
-                                onSubmitReport = { type, content ->
-                                    userProfile?.let {
-                                        rescueViewModel.submitReport(
-                                            requestId = null,
-                                            reportType = type,
-                                            content = content,
-                                            userProfile = it
-                                        )
-                                    }
-                                }
-                            )
-                        }
-
                         MainNavTab.PROFILE -> {
                             ProfileScreen(
                                 userProfile = userProfile,
@@ -418,7 +450,7 @@ fun MainAppHost(
                                     authViewModel.updateProfile(name, phone, vType, vName, plate, role)
                                 },
                                 onNavigateToHistory = { currentTab = MainNavTab.HISTORY },
-                                onNavigateToReports = { currentTab = MainNavTab.REPORTS },
+                                onNavigateToReports = { currentScreen = AppScreen.Reports },
                                 onSignOut = {
                                     authViewModel.signOut()
                                 }
