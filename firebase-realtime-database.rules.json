@@ -1,0 +1,40 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'Admin')"
+      }
+    },
+    "requests": {
+      ".read": "auth != null",
+      ".indexOn": ["userId", "status", "timestamp"],
+      "$requestId": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Rescue Staff' || root.child('users').child(auth.uid).child('role').val() === 'Admin')"
+      }
+    },
+    "chats": {
+      "$requestId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$messageId": {
+          ".validate": "newData.hasChildren(['senderId', 'message', 'timestamp'])"
+        }
+      }
+    },
+    "ratings": {
+      ".read": "auth != null",
+      ".indexOn": ["userId", "requestId"],
+      "$ratingId": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    },
+    "reports": {
+      ".read": "auth != null",
+      ".indexOn": ["userId"],
+      "$reportId": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Admin')"
+      }
+    }
+  }
+}

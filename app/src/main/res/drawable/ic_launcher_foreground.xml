@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Rescue Crane / Tow boom -->
+    <path
+        android:fillColor="#FFF7ED"
+        android:pathData="M38,36 L52,50 L48,53 L35,39 Z" />
+
+    <!-- Tow Cable & Hook -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M35,39 L27,47 L28,49 L36,41 Z" />
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M27,47 C25,49 24,53 27,55 C29,56 32,55 33,53 C34,51 32,50 31,51 C30,52 28,52 27,50 Z" />
+
+    <!-- Emergency Strobe Beacon Light -->
+    <path
+        android:fillColor="#FEF08A"
+        android:pathData="M64,36 C64,34 66,32 69,32 C72,32 74,34 74,36 Z" />
+    <!-- Light beam rays -->
+    <path
+        android:fillColor="#FEF08A"
+        android:pathData="M68,27 L70,27 L70,30 L68,30 Z M59,31 L61,29 L63,31 L61,33 Z M77,31 L79,33 L77,35 L75,33 Z" />
+
+    <!-- Rescue Truck Cab and Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,50 L64,50 L68,40 L78,40 L84,52 L84,65 L80,65 C80,60 76,57 71,57 C66,57 62,60 62,65 L46,65 C46,60 42,57 37,57 C32,57 28,60 28,65 L26,65 L26,56 L42,56 L48,50 Z" />
+
+    <!-- Cab Window -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M66,42 L76,42 L80,50 L66,50 Z" />
+
+    <!-- Front Bumper / Grill -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M83,57 L86,57 L86,63 L83,63 Z" />
+
+    <!-- Front Wheel -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M71,67m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path
+        android:fillColor="#FED7AA"
+        android:pathData="M71,67m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+
+    <!-- Rear Wheel -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M37,67m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path
+        android:fillColor="#FED7AA"
+        android:pathData="M37,67m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+
+    <!-- 24/7 Roadside Rescue Emblem Banner at bottom -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M32,77 L76,77 A3,3 0 0,1 79,80 L79,85 A3,3 0 0,1 76,88 L32,88 A3,3 0 0,1 29,85 L29,80 A3,3 0 0,1 32,77 Z" />
+
+    <!-- "24/7" Text shape representation in emblem -->
+    <!-- '2' -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M34,80 H39 V82 H36 V84 H39 V86 H34 V84 H37 V82 H34 Z" />
+    <!-- '4' -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M42,80 H44 V83 H46 V80 H48 V86 H46 V84 H42 Z" />
+    <!-- '/' -->
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M51,86 L54,80 H56 L53,86 Z" />
+    <!-- '7' -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M58,80 H64 V82 L61,86 H59 L62,82 H58 Z" />
+    <!-- Small wrench or star indicator -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M69,83m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,81 H70 V85 H68 Z M67,82 H71 V84 H67 Z" />
+</vector>
