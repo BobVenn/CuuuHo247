@@ -60,6 +60,7 @@ fun AuthScreen(
     var regVehicleName by remember { mutableStateOf("") }
     var regLicensePlate by remember { mutableStateOf("") }
     var regPassVisible by remember { mutableStateOf(false) }
+    var regRole by remember { mutableStateOf(AppConfig.UserRole.USER) }
 
     val isLoading by authViewModel.isLoading.collectAsState()
     val errorMessage by authViewModel.errorMessage.collectAsState()
@@ -427,7 +428,33 @@ fun AuthScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                         Text(
-                            text = "Thông tin phương tiện (Tùy chọn):",
+                            text = "Loại tài khoản đăng ký:",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = regRole == AppConfig.UserRole.USER,
+                                onClick = { regRole = AppConfig.UserRole.USER },
+                                label = { Text("Chủ Xe / Khách Hàng", fontSize = 11.5.sp, fontWeight = if (regRole == AppConfig.UserRole.USER) FontWeight.Bold else FontWeight.Normal) },
+                                leadingIcon = { Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = regRole == AppConfig.UserRole.STAFF,
+                                onClick = { regRole = AppConfig.UserRole.STAFF },
+                                label = { Text("Kỹ Thuật Viên", fontSize = 11.5.sp, fontWeight = if (regRole == AppConfig.UserRole.STAFF) FontWeight.Bold else FontWeight.Normal) },
+                                leadingIcon = { Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Text(
+                            text = if (regRole == AppConfig.UserRole.STAFF) "Phương tiện cứu hộ phục vụ (Tùy chọn):" else "Thông tin phương tiện (Tùy chọn):",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -450,7 +477,7 @@ fun AuthScreen(
                         OutlinedTextField(
                             value = regVehicleName,
                             onValueChange = { regVehicleName = it },
-                            label = { Text("Tên xe (vd: Toyota Vios, Honda AirBlade)") },
+                            label = { Text(if (regRole == AppConfig.UserRole.STAFF) "Loại xe cứu hộ (vd: Hyundai Mighty sàn trượt, Xe cẩu kéo)" else "Tên xe (vd: Toyota Vios, Honda AirBlade)") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -476,6 +503,7 @@ fun AuthScreen(
                                     vehicleType = regVehicleType,
                                     vehicleName = regVehicleName,
                                     licensePlate = regLicensePlate,
+                                    role = regRole,
                                     onSuccess = onAuthSuccess
                                 )
                             },
@@ -544,97 +572,28 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Quick 1-Tap Access Card
-            Card(
+            // Security & Privacy Trust Indicator
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("card_demo_accounts"),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.5.dp, BorderLight),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(20.dp))
-                        Text(
-                            text = "TRUY CẬP NHANH HỆ THỐNG CỨU HỘ",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Text(
-                        text = "Đăng nhập nhanh tiện lợi để sử dụng ngay các dịch vụ cứu hộ giao thông 24/7:",
-                        fontSize = 11.5.sp,
-                        color = OnSurfaceVariantLight,
-                        lineHeight = 16.sp
-                    )
-
-                    // Customer Direct Access
-                    Button(
-                        onClick = {
-                            authViewModel.signInDemo("USER", onSuccess = onAuthSuccess)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("btn_demo_user"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary),
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            Icons.Default.DirectionsCar,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "KHÁCH HÀNG (CHỦ XE CẦN CỨU HỘ)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-
-                    // Technician / Staff Direct Access
-                    OutlinedButton(
-                        onClick = {
-                            authViewModel.signInDemo("STAFF", onSuccess = onAuthSuccess)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .testTag("btn_demo_staff"),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.5.dp, RescueSecondary),
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            Icons.Default.Build,
-                            contentDescription = null,
-                            tint = RescueSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "KỸ THUẬT VIÊN / ĐỐI TÁC CỨU HỘ",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RescueSecondary
-                        )
-                    }
-                }
+                Icon(
+                    Icons.Default.Security,
+                    contentDescription = null,
+                    tint = SafeGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Bảo mật tài khoản & dữ liệu cứu hộ theo tiêu chuẩn Google Play",
+                    fontSize = 11.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 

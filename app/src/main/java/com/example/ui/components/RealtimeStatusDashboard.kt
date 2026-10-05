@@ -573,65 +573,6 @@ fun RealtimeStatusDashboard(
                         }
                     }
                 }
-
-                // Simulation mode stepper bar for testing in AI Studio preview
-                if (onSimulateStep != null && current.status != AppConfig.RequestStatus.CANCELLED && current.status != AppConfig.RequestStatus.COMPLETED) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.PlayCircle, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(14.dp))
-                            Text(
-                                text = "Cập nhật tiến trình trực tiếp (Realtime):",
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = RescuePrimary
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { onSimulateStep(AppConfig.RequestStatus.ACCEPTED) },
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                enabled = statusStage < 2
-                            ) {
-                                Text("1. Điều phối", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedButton(
-                                onClick = { onSimulateStep(AppConfig.RequestStatus.EN_ROUTE) },
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                enabled = statusStage in 1..2
-                            ) {
-                                Text("2. Xuất phát", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedButton(
-                                onClick = { onSimulateStep(AppConfig.RequestStatus.ARRIVED) },
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                enabled = statusStage in 1..3
-                            ) {
-                                Text("3. Đến nơi", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Button(
-                                onClick = { onSimulateStep(AppConfig.RequestStatus.COMPLETED) },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = SafeGreen),
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                enabled = statusStage < 5
-                            ) {
-                                Text("4. Xong", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
             }
         }
     }

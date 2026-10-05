@@ -532,43 +532,6 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
             } catch (e: Exception) {
                 Log.w(TAG, "Firebase sync notice: ${e.message}")
             }
-
-            // Auto-dispatch simulation: Kỹ thuật viên tự động nhận đơn sau 3.5 giây để trải nghiệm luồng thực tế
-            if (userProfile.role != AppConfig.UserRole.STAFF) {
-                launch {
-                    kotlinx.coroutines.delay(3500)
-                    val currentReq = _allRequests.value.find { it.id == reqId }
-                    if (currentReq != null && currentReq.status == AppConfig.RequestStatus.PENDING) {
-                        val mockStaff = UserProfile(
-                            uid = "staff_toan_247",
-                            displayName = "KTV Nguyễn Văn Toàn (Gara Cứu Hộ 24/7)",
-                            phone = "0901234567",
-                            role = AppConfig.UserRole.STAFF,
-                            vehicleType = "Xe cứu hộ sàn trượt",
-                            licensePlate = "29C-888.12"
-                        )
-                        acceptRequestByStaff(reqId, mockStaff)
-                        _statusMessage.value = "⚡ KTV Nguyễn Văn Toàn đã tiếp nhận đơn của bạn và đang xuất phát!"
-                        
-                        // KTV nhắn tin chào khách hàng
-                        kotlinx.coroutines.delay(1200)
-                        val welcomeMsg = ChatMessage(
-                            id = "MSG_WELCOME_${System.currentTimeMillis()}",
-                            requestId = reqId,
-                            senderId = mockStaff.uid,
-                            senderName = mockStaff.displayName,
-                            senderRole = AppConfig.UserRole.STAFF,
-                            receiverId = userProfile.uid,
-                            message = "Chào bạn! Tôi là KTV Toàn bên đội cứu hộ. Tôi đã nhận đơn và đang xuất phát đến vị trí của bạn ngay nhé.",
-                            timestamp = System.currentTimeMillis()
-                        )
-                        _chatMessages.value = _chatMessages.value + welcomeMsg
-                        try {
-                            firebaseManager.sendChatMessage(welcomeMsg)
-                        } catch (_: Exception) {}
-                    }
-                }
-            }
         }
     }
 
@@ -747,53 +710,6 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
                 firebaseManager.sendChatMessage(msg)
             } catch (e: Exception) {
                 Log.w(TAG, "Firebase sync notice: ${e.message}")
-            }
-
-            // Tự động phản hồi tương tác tin nhắn (đảm bảo tính năng chat luôn phản hồi sống động)
-            launch {
-                kotlinx.coroutines.delay(1600)
-                val targetReq = _allRequests.value.find { it.id == requestId }
-                if (userProfile.role != AppConfig.UserRole.STAFF) {
-                    // Khách nhắn -> KTV trả lời
-                    val staffName = targetReq?.staffName ?: "KTV Nguyễn Văn Toàn"
-                    val staffUid = targetReq?.staffId ?: "staff_toan_247"
-                    val replyCount = _chatMessages.value.count { it.senderId == staffUid }
-                    val replyText = when (replyCount) {
-                        0, 1 -> "Tôi đang chạy xe đến vị trí của bạn, bạn yên tâm đứng ở nơi an toàn nhé."
-                        2 -> "Tôi cách bạn khoảng 1km nữa, bạn bật đèn cảnh báo sự cố (hazard) trên xe giúp tôi nhé."
-                        3 -> "Tôi đã nhìn thấy xe của bạn rồi, tôi đang tấp xe cứu hộ vào lề đường."
-                        else -> "Đã nhận thông tin từ bạn! Tôi đang xử lý nhanh nhất có thể."
-                    }
-                    val reply = ChatMessage(
-                        id = "MSG_REPLY_${System.currentTimeMillis()}",
-                        requestId = requestId,
-                        senderId = staffUid,
-                        senderName = staffName,
-                        senderRole = AppConfig.UserRole.STAFF,
-                        receiverId = userProfile.uid,
-                        message = replyText,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    _chatMessages.value = _chatMessages.value + reply
-                    try { firebaseManager.sendChatMessage(reply) } catch (_: Exception) {}
-                } else {
-                    // KTV nhắn -> Khách trả lời
-                    val custName = targetReq?.userName ?: "Khách hàng"
-                    val custUid = targetReq?.userId ?: "usr_client_01"
-                    val replyText = "Dạ vâng anh, em đang đứng đợi cạnh xe ở lề đường ạ!"
-                    val reply = ChatMessage(
-                        id = "MSG_REPLY_${System.currentTimeMillis()}",
-                        requestId = requestId,
-                        senderId = custUid,
-                        senderName = custName,
-                        senderRole = AppConfig.UserRole.USER,
-                        receiverId = userProfile.uid,
-                        message = replyText,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    _chatMessages.value = _chatMessages.value + reply
-                    try { firebaseManager.sendChatMessage(reply) } catch (_: Exception) {}
-                }
             }
         }
     }

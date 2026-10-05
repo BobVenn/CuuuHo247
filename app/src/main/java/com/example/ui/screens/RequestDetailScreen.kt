@@ -667,118 +667,107 @@ fun RequestDetailScreen(
                 }
             }
 
-            // BẢNG ĐIỀU PHỐI TIẾN ĐỘ CỨU HỘ HIỆN TRƯỜNG
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("card_interactive_simulation"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, EmergencyGold.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            // BẢNG ĐIỀU PHỐI TIẾN ĐỘ DÀNH RIÊNG CHO KỸ THUẬT VIÊN
+            if (isStaffOrAdmin) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("card_interactive_simulation"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, EmergencyGold.copy(alpha = 0.5f))
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Default.PlayCircle, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(18.dp))
-                            Text("Bảng Điều Phối Cứu Hộ", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = EmergencyGold.copy(alpha = 0.15f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "Kỹ Thuật Viên / Điều Phối",
-                                color = Color(0xFFB45309),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Cập nhật tiến độ xử lý hiện trường hoặc kích hoạt tiến trình tự động:",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { onAcceptRequestByStaff(request.id) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            enabled = request.status == AppConfig.RequestStatus.PENDING
-                        ) {
-                            Text("1. Nhận Đơn", fontSize = 10.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.PlayCircle, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(18.dp))
+                                Text("Bảng Điều Phối Cứu Hộ (KTV)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = EmergencyGold.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "Dành Cho KTV",
+                                    color = Color(0xFFB45309),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            enabled = request.status == AppConfig.RequestStatus.ACCEPTED
+                        Text(
+                            text = "Cập nhật tiến độ xử lý hiện trường cho đơn hàng này:",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("2. Đang Đến", fontSize = 10.sp)
+                            OutlinedButton(
+                                onClick = { onAcceptRequestByStaff(request.id) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                enabled = request.status == AppConfig.RequestStatus.PENDING
+                            ) {
+                                Text("1. Nhận Đơn", fontSize = 10.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                enabled = request.status == AppConfig.RequestStatus.ACCEPTED
+                            ) {
+                                Text("2. Đang Đến", fontSize = 10.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                enabled = request.status == AppConfig.RequestStatus.EN_ROUTE
+                            ) {
+                                Text("3. Đến Nơi", fontSize = 10.sp)
+                            }
                         }
 
-                        OutlinedButton(
-                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            enabled = request.status == AppConfig.RequestStatus.EN_ROUTE
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("3. Đến Nơi", fontSize = 10.sp)
-                        }
-                    }
+                            OutlinedButton(
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                enabled = request.status == AppConfig.RequestStatus.ARRIVED
+                            ) {
+                                Text("4. Đang Xử Lý", fontSize = 10.sp)
+                            }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            enabled = request.status == AppConfig.RequestStatus.ARRIVED
-                        ) {
-                            Text("4. Đang Xử Lý", fontSize = 10.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, 250000L) },
-                            modifier = Modifier.weight(1f).height(38.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            enabled = request.status != AppConfig.RequestStatus.COMPLETED && request.status != AppConfig.RequestStatus.CANCELLED
-                        ) {
-                            Text("5. Hoàn Tất", fontSize = 10.sp)
-                        }
-                    }
-
-                    if (onSimulateRescueFlow != null && request.status != AppConfig.RequestStatus.COMPLETED) {
-                        Button(
-                            onClick = { onSimulateRescueFlow(request.id) },
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmergencyGold),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("⚡ Kích Hoạt Tiến Trình Tự Động", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            OutlinedButton(
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, 250000L) },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                enabled = request.status != AppConfig.RequestStatus.COMPLETED && request.status != AppConfig.RequestStatus.CANCELLED
+                            ) {
+                                Text("5. Hoàn Tất", fontSize = 10.sp)
+                            }
                         }
                     }
                 }

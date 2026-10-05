@@ -739,7 +739,7 @@ fun HomeScreen(
                     onCallHotline = { phone -> quickDial(phone) },
                     onCallTechnician = { phone -> quickDial(phone) },
                     onOpenChat = { onRequestClick(activeRequest) },
-                    onSimulateStep = if (onUpdateStatus != null) { { newSt -> onUpdateStatus(activeRequest.id, newSt) } } else null
+                    onSimulateStep = null
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))

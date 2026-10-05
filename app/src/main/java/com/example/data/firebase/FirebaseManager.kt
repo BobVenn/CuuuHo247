@@ -161,7 +161,8 @@ class FirebaseManager private constructor() {
         phone: String,
         vehicleType: String,
         vehicleName: String,
-        licensePlate: String
+        licensePlate: String,
+        role: String = AppConfig.UserRole.USER
     ): Result<FirebaseUser> {
         return try {
             Log.i(TAG, "Attempting signUp for $email")
@@ -174,7 +175,7 @@ class FirebaseManager private constructor() {
                 email = email.trim(),
                 displayName = displayName.trim(),
                 phone = phone.trim(),
-                role = AppConfig.UserRole.USER,
+                role = role,
                 vehicleType = vehicleType,
                 vehicleName = vehicleName.trim(),
                 licensePlate = licensePlate.trim(),
