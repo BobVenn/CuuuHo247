@@ -3,16 +3,20 @@ package com.example
 import android.app.Application
 import android.util.Log
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.database.FirebaseDatabase
 
 class RescueApplication : Application() {
 
     companion object {
         private const val TAG = "RescueApp"
+        lateinit var instance: RescueApplication
+            private set
     }
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         Log.i(TAG, "RescueApplication starting up...")
 
         // Setup global uncaught exception handler to log crashes and prevent abrupt termination
@@ -23,9 +27,28 @@ class RescueApplication : Application() {
         }
 
         try {
-            // Ensure Firebase is properly initialized
-            val app = FirebaseApp.initializeApp(this)
-            Log.i(TAG, "FirebaseApp initialized: ${app?.name}")
+            // Check if Firebase is already initialized
+            val initialized = try { FirebaseApp.getApps(this).isNotEmpty() } catch (_: Exception) { false }
+            if (!initialized) {
+                val app = try {
+                    FirebaseApp.initializeApp(this)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Auto FirebaseApp.initializeApp failed, falling back to explicit options: ${e.message}")
+                    null
+                }
+
+                if (app == null || FirebaseApp.getApps(this).isEmpty()) {
+                    val options = FirebaseOptions.Builder()
+                        .setApplicationId("1:342096270055:android:ed752cfcb1e14d3ff44842")
+                        .setApiKey("AIzaSyBp0u6_-VVNUghScAyrZO-CoBNXOROys4I")
+                        .setDatabaseUrl("https://gen-lang-client-0618945200-default-rtdb.firebaseio.com/")
+                        .setProjectId("gen-lang-client-0618945200")
+                        .setStorageBucket("gen-lang-client-0618945200.firebasestorage.app")
+                        .build()
+                    FirebaseApp.initializeApp(this, options)
+                    Log.i(TAG, "FirebaseApp initialized with explicit fallback options successfully")
+                }
+            }
 
             // Configure Firebase Realtime Database
             try {

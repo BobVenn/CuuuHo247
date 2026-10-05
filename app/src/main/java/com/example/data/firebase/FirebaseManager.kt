@@ -1,8 +1,11 @@
 package com.example.data.firebase
 
 import android.util.Log
+import com.example.RescueApplication
 import com.example.data.config.AppConfig
 import com.example.data.model.*
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -22,27 +25,54 @@ class FirebaseManager private constructor() {
 
         fun getInstance(): FirebaseManager {
             return INSTANCE ?: synchronized(this) {
+                ensureFirebaseInitialized()
                 val instance = FirebaseManager()
                 INSTANCE = instance
                 instance
             }
         }
+
+        fun ensureFirebaseInitialized() {
+            try {
+                val app = try { FirebaseApp.getInstance() } catch (_: Exception) { null }
+                if (app == null) {
+                    val context = try { RescueApplication.instance } catch (_: Exception) { null }
+                    if (context != null) {
+                        val options = FirebaseOptions.Builder()
+                            .setApplicationId("1:342096270055:android:ed752cfcb1e14d3ff44842")
+                            .setApiKey("AIzaSyBp0u6_-VVNUghScAyrZO-CoBNXOROys4I")
+                            .setDatabaseUrl("https://gen-lang-client-0618945200-default-rtdb.firebaseio.com/")
+                            .setProjectId("gen-lang-client-0618945200")
+                            .setStorageBucket("gen-lang-client-0618945200.firebasestorage.app")
+                            .build()
+                        FirebaseApp.initializeApp(context, options)
+                        Log.i(TAG, "ensureFirebaseInitialized: initialized default FirebaseApp")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "ensureFirebaseInitialized notice: ${e.message}")
+            }
+        }
     }
 
     val auth: FirebaseAuth = try {
+        ensureFirebaseInitialized()
         FirebaseAuth.getInstance()
     } catch (e: Exception) {
         Log.e(TAG, "Failed to get FirebaseAuth instance: ${e.message}", e)
-        throw e
+        ensureFirebaseInitialized()
+        FirebaseAuth.getInstance()
     }
 
     // Connect to FirebaseDatabase instance safely
     val database: FirebaseDatabase = try {
+        ensureFirebaseInitialized()
         FirebaseDatabase.getInstance().apply {
             Log.i(TAG, "FirebaseDatabase instance connected to default URL")
         }
     } catch (e: Exception) {
         Log.e(TAG, "Failed to get default FirebaseDatabase, trying custom URL: ${e.message}", e)
+        ensureFirebaseInitialized()
         try {
             FirebaseDatabase.getInstance(AppConfig.FIREBASE_DATABASE_URL)
         } catch (e2: Exception) {
