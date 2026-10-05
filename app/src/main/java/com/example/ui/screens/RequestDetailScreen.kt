@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,14 +14,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.config.AppConfig
+import com.example.data.firebase.FirebaseManager
 import com.example.data.model.RescueRequest
 import com.example.data.model.UserProfile
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.example.ui.components.LeafletMapMarker
+import com.example.ui.components.LeafletMapView
+import com.example.ui.components.RatingReviewDialog
+import com.example.ui.components.RealtimeStatusDashboard
+import com.example.ui.components.RescueReceiptDialog
+import com.example.ui.components.VietQrPaymentDialog
+import com.example.ui.components.openGoogleMapsNavigation
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -38,9 +50,17 @@ fun RequestDetailScreen(
     onCancelRequest: (String) -> Unit,
     onAcceptRequestByStaff: (String) -> Unit,
     onUpdateStatusByStaff: (String, String, Long?) -> Unit,
-    onSubmitRating: (rating: Int, comment: String) -> Unit
+    onSubmitRating: (rating: Int, comment: String) -> Unit,
+    onSimulateRescueFlow: ((String) -> Unit)? = null,
+    onInAppCall: ((name: String, role: String, phone: String, issue: String) -> Unit)? = null,
+    onNavigateToCoordinates: ((lat: Double, lng: Double, label: String) -> Unit)? = null,
+    onUpdatePaymentStatus: ((requestId: String, paymentStatus: String) -> Unit)? = null,
+    onShareTrackingWithFamily: ((RescueRequest) -> Unit)? = null
 ) {
+    val context = LocalContext.current
     var showRatingDialog by remember { mutableStateOf(false) }
+    var showVietQrDialog by remember { mutableStateOf(false) }
+    var showReceiptDialog by remember { mutableStateOf(false) }
     var ratingStars by remember { mutableIntStateOf(5) }
     var ratingComment by remember { mutableStateOf("") }
     var showCancelConfirmDialog by remember { mutableStateOf(false) }
@@ -221,12 +241,244 @@ fun RequestDetailScreen(
                         Text(dateFormat.format(Date(request.timestamp)), fontSize = 14.sp)
                     }
 
+                    // Incident photo if provided by customer
+                    if (!request.imageUrl.isNullOrBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(18.dp))
+                                Text("Ảnh hiện trường sự cố:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, BorderLight),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                            ) {
+                                AsyncImage(
+                                    model = request.imageUrl,
+                                    contentDescription = "Ảnh hiện trường xe hỏng",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+
                     if (request.cost != null && request.cost > 0) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Payments, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(20.dp))
                             Text("Chi phí cứu hộ: ", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             Text(currencyFormat.format(request.cost), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SafeGreen)
                         }
+                    }
+                }
+            }
+
+            // THANH TOÁN VIETQR & TIỀN MẶT CARD
+            if (request.cost != null && request.cost > 0) {
+                val isPaid = request.paymentStatus.startsWith("PAID")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("payment_info_card"),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.5.dp, if (isPaid) SafeGreen else EmergencyGold),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Payments, contentDescription = null, tint = if (isPaid) SafeGreen else EmergencyGold)
+                                Text("THANH TOÁN CHI PHÍ", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isPaid) SafeGreen else Color(0xFFFEF3C7)
+                            ) {
+                                Text(
+                                    text = when (request.paymentStatus) {
+                                        "PAID_VIETQR" -> "ĐÃ TT VIETQR ✓"
+                                        "PAID_CASH" -> "ĐÃ TRẢ TIỀN MẶT ✓"
+                                        else -> "CHƯA THANH TOÁN"
+                                    },
+                                    color = if (isPaid) Color.White else Color(0xFF92400E),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Tổng tiền thanh toán:", fontSize = 11.5.sp, color = OnSurfaceVariantLight)
+                                Text(
+                                    text = currencyFormat.format(request.cost),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (isPaid) SafeGreen else AlertRed
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (!isPaid) {
+                                    Button(
+                                        onClick = { showVietQrDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = SafeGreen),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.testTag("btn_open_vietqr_dialog")
+                                    ) {
+                                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("QUÉT VIETQR", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { showReceiptDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.testTag("btn_view_insurance_receipt")
+                                ) {
+                                    Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("BIÊN LAI", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // Share tracking to relatives / friends
+                        OutlinedButton(
+                            onClick = {
+                                if (onShareTrackingWithFamily != null) {
+                                    onShareTrackingWithFamily(request)
+                                } else {
+                                    val trackingText = "🚨 Mình đang gặp sự cố xe cần cứu hộ!\n📍 Vị trí: ${request.address}\n🗺️ Bản đồ: https://maps.google.com/?q=${request.latitude},${request.longitude}\n🔧 KTV: ${request.staffName ?: "Đội Cứu Hộ 24/7"} (SĐT: ${request.staffPhone ?: AppConfig.DEFAULT_RESCUE_HOTLINE})\n🚗 Sự cố: ${request.issueType} (${request.licensePlate})"
+                                    val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        putExtra(android.content.Intent.EXTRA_TEXT, trackingText)
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(sendIntent, "Chia sẻ hành trình cứu hộ cho người thân qua:"))
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, BorderLight)
+                        ) {
+                            Icon(Icons.Default.ShareLocation, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Chia Sẻ Hành Trình Cho Người Thân (Zalo/SMS)", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = OnSurfaceLight)
+                        }
+                    }
+                }
+            }
+
+            // BẢN ĐỒ VỊ TRÍ SỰ CỐ & CHỈ ĐƯỜNG LÁI XE (Leaflet.js & OpenStreetMap)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("request_detail_map_card"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, BorderLight),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Map, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(20.dp))
+                            Text(
+                                text = "Bản Đồ Vị Trí Sự Cố",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = RescuePrimary.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = "${String.format(Locale.US, "%.4f, %.4f", request.latitude, request.longitude)}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = RescuePrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    val detailMarker = remember(request.id, request.latitude, request.longitude) {
+                        listOf(
+                            LeafletMapMarker(
+                                id = request.id,
+                                title = "${request.issueType} • ${request.userName}",
+                                snippet = request.address,
+                                latitude = request.latitude,
+                                longitude = request.longitude,
+                                type = "REQUEST",
+                                status = request.status
+                            )
+                        )
+                    }
+
+                    LeafletMapView(
+                        centerLat = request.latitude,
+                        centerLng = request.longitude,
+                        centerAddress = request.address,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        markers = detailMarker,
+                        onNavigateClick = { lat, lng, label ->
+                            if (onNavigateToCoordinates != null) {
+                                onNavigateToCoordinates(lat, lng, label)
+                            } else {
+                                openGoogleMapsNavigation(context, lat, lng, label)
+                            }
+                        }
+                    )
+
+                    // Big Navigation Button to drive directly to the user
+                    Button(
+                        onClick = {
+                            if (onNavigateToCoordinates != null) {
+                                onNavigateToCoordinates(request.latitude, request.longitude, request.address)
+                            } else {
+                                openGoogleMapsNavigation(context, request.latitude, request.longitude, request.address)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("btn_navigate_to_requester"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
+                    ) {
+                        Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "CHỈ ĐƯỜNG LÁI XE ĐẾN NƠI (GOOGLE MAPS)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
@@ -260,15 +512,27 @@ fun RequestDetailScreen(
                                     }
                                 }
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (!request.staffPhone.isNullOrBlank()) {
-                                        FilledIconButton(
-                                            onClick = { onCallPhone(request.staffPhone) },
-                                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = SafeGreen)
-                                        ) {
-                                            Icon(Icons.Default.Phone, contentDescription = "Gọi KTV", tint = Color.White)
-                                        }
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    // In-App Call Button
+                                    FilledIconButton(
+                                        onClick = {
+                                            if (onInAppCall != null) {
+                                                onInAppCall(
+                                                    request.staffName ?: "Kỹ thuật viên",
+                                                    "Kỹ thuật viên cứu hộ",
+                                                    request.staffPhone ?: "",
+                                                    "Cứu hộ: ${request.issueType}"
+                                                )
+                                            } else {
+                                                onCallPhone(request.staffPhone ?: "")
+                                            }
+                                        },
+                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = SafeGreen)
+                                    ) {
+                                        Icon(Icons.Default.PhoneInTalk, contentDescription = "Gọi KTV qua App", tint = Color.White)
                                     }
+
+                                    // Chat Button
                                     FilledIconButton(
                                         onClick = { onOpenChat(request.id) },
                                         colors = IconButtonDefaults.filledIconButtonColors(containerColor = RescuePrimary)
@@ -306,15 +570,27 @@ fun RequestDetailScreen(
                                 Text(request.userPhone.ifBlank { "Chưa cập nhật SĐT" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (request.userPhone.isNotBlank()) {
-                                    FilledIconButton(
-                                        onClick = { onCallPhone(request.userPhone) },
-                                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = SafeGreen)
-                                    ) {
-                                        Icon(Icons.Default.Phone, contentDescription = "Gọi khách", tint = Color.White)
-                                    }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // In-App Call Button
+                                FilledIconButton(
+                                    onClick = {
+                                        if (onInAppCall != null) {
+                                            onInAppCall(
+                                                request.userName.ifBlank { "Khách hàng" },
+                                                "Khách hàng gặp sự cố",
+                                                request.userPhone,
+                                                "${request.issueType} • ${request.vehicleType}"
+                                            )
+                                        } else {
+                                            onCallPhone(request.userPhone)
+                                        }
+                                    },
+                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = SafeGreen)
+                                ) {
+                                    Icon(Icons.Default.PhoneInTalk, contentDescription = "Gọi khách qua App", tint = Color.White)
                                 }
+
+                                // Chat Button
                                 FilledIconButton(
                                     onClick = { onOpenChat(request.id) },
                                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = RescuePrimary)
@@ -391,73 +667,118 @@ fun RequestDetailScreen(
                 }
             }
 
-            // RESCUE STAFF / ADMIN ACTIONS
-            if (isStaffOrAdmin) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            // BẢNG ĐIỀU PHỐI TIẾN ĐỘ CỨU HỘ HIỆN TRƯỜNG
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_interactive_simulation"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, EmergencyGold.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Bảng Điều Khiển Nhân Viên", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.PlayCircle, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(18.dp))
+                            Text("Bảng Điều Phối Cứu Hộ", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = EmergencyGold.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "Kỹ Thuật Viên / Điều Phối",
+                                color = Color(0xFFB45309),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
 
-                        if (request.status == AppConfig.RequestStatus.PENDING) {
-                            Button(
-                                onClick = { onAcceptRequestByStaff(request.id) },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("TIẾP NHẬN ĐƠN NÀY", fontWeight = FontWeight.Bold)
-                            }
+                    Text(
+                        text = "Cập nhật tiến độ xử lý hiện trường hoặc kích hoạt tiến trình tự động:",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { onAcceptRequestByStaff(request.id) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            enabled = request.status == AppConfig.RequestStatus.PENDING
+                        ) {
+                            Text("1. Nhận Đơn", fontSize = 10.sp)
                         }
 
-                        if (request.status == AppConfig.RequestStatus.ACCEPTED) {
-                            Button(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost) },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
-                            ) {
-                                Text("CẬP NHẬT: ĐANG ĐẾN")
-                            }
+                        OutlinedButton(
+                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            enabled = request.status == AppConfig.RequestStatus.ACCEPTED
+                        ) {
+                            Text("2. Đang Đến", fontSize = 10.sp)
                         }
 
-                        if (request.status == AppConfig.RequestStatus.EN_ROUTE) {
-                            Button(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost) },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
-                            ) {
-                                Text("CẬP NHẬT: ĐÃ ĐẾN NƠI")
-                            }
+                        OutlinedButton(
+                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            enabled = request.status == AppConfig.RequestStatus.EN_ROUTE
+                        ) {
+                            Text("3. Đến Nơi", fontSize = 10.sp)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            enabled = request.status == AppConfig.RequestStatus.ARRIVED
+                        ) {
+                            Text("4. Đang Xử Lý", fontSize = 10.sp)
                         }
 
-                        if (request.status == AppConfig.RequestStatus.ARRIVED) {
-                            Button(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost) },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
-                            ) {
-                                Text("CẬP NHẬT: ĐANG XỬ LÝ")
-                            }
+                        OutlinedButton(
+                            onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, 250000L) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            enabled = request.status != AppConfig.RequestStatus.COMPLETED && request.status != AppConfig.RequestStatus.CANCELLED
+                        ) {
+                            Text("5. Hoàn Tất", fontSize = 10.sp)
                         }
+                    }
 
-                        if (request.status == AppConfig.RequestStatus.IN_PROGRESS) {
-                            Button(
-                                onClick = { showUpdateCostDialog = true },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
-                            ) {
-                                Icon(Icons.Default.DoneAll, contentDescription = null)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("HOÀN THÀNH & NHẬP CHI PHÍ", fontWeight = FontWeight.Bold)
-                            }
+                    if (onSimulateRescueFlow != null && request.status != AppConfig.RequestStatus.COMPLETED) {
+                        Button(
+                            onClick = { onSimulateRescueFlow(request.id) },
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmergencyGold),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("⚡ Kích Hoạt Tiến Trình Tự Động", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
@@ -487,48 +808,15 @@ fun RequestDetailScreen(
         )
     }
 
-    // Rating Dialog
+    // Rating Dialog with 5-Stars & Quick Review Tags
     if (showRatingDialog) {
-        AlertDialog(
-            onDismissRequest = { showRatingDialog = false },
-            title = { Text("Đánh Giá Dịch Vụ Cứu Hộ") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Vui lòng đánh giá chất lượng phục vụ của kỹ thuật viên:")
-                    Row(horizontalArrangement = Arrangement.Center) {
-                        (1..5).forEach { star ->
-                            IconButton(onClick = { ratingStars = star }) {
-                                Icon(
-                                    imageVector = if (star <= ratingStars) Icons.Default.Star else Icons.Default.StarBorder,
-                                    contentDescription = "$star sao",
-                                    tint = EmergencyGold,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = ratingComment,
-                        onValueChange = { ratingComment = it },
-                        label = { Text("Nhận xét (Tùy chọn)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showRatingDialog = false
-                        onSubmitRating(ratingStars, ratingComment)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
-                ) {
-                    Text("Gửi Đánh Giá")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRatingDialog = false }) { Text("Hủy") }
+        RatingReviewDialog(
+            staffName = request.staffName,
+            issueType = request.issueType,
+            onDismiss = { showRatingDialog = false },
+            onSubmit = { rating, comment ->
+                showRatingDialog = false
+                onSubmitRating(rating, comment)
             }
         )
     }
@@ -537,7 +825,7 @@ fun RequestDetailScreen(
     if (showUpdateCostDialog) {
         AlertDialog(
             onDismissRequest = { showUpdateCostDialog = false },
-            title = { Text("Xác Nhận Hoàn Thành") },
+            title = { Text("Xác Nhận Hoàn Thành & Báo Giá") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Nhập chi phí thực tế thu của khách hàng (VND):")
@@ -548,23 +836,52 @@ fun RequestDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    Text(
+                        text = "💡 Hệ thống sẽ tự động tạo mã VietQR Napas để khách hàng quét trả tiền tức thì qua Banking hoặc trả tiền mặt.",
+                        fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         showUpdateCostDialog = false
-                        val cost = costInput.toLongOrNull() ?: 0L
+                        val cost = costInput.toLongOrNull() ?: 250000L
                         onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, cost)
+                        showVietQrDialog = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
                 ) {
-                    Text("Xác Nhận")
+                    Text("Xác Nhận & Tạo VietQR")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showUpdateCostDialog = false }) { Text("Hủy") }
             }
+        )
+    }
+
+    // VietQR Payment Dialog (Napas standard QR code generation)
+    if (showVietQrDialog && (request.cost ?: 0L) > 0) {
+        VietQrPaymentDialog(
+            requestId = request.id,
+            cost = request.cost ?: 250000L,
+            issueType = request.issueType,
+            onDismiss = { showVietQrDialog = false },
+            onConfirmPayment = { method ->
+                showVietQrDialog = false
+                val newStatus = if (method == "VIETQR") "PAID_VIETQR" else "PAID_CASH"
+                onUpdatePaymentStatus?.invoke(request.id, newStatus)
+            }
+        )
+    }
+
+    // Rescue Receipt & Insurance Reimbursement Dialog
+    if (showReceiptDialog) {
+        RescueReceiptDialog(
+            request = request,
+            onDismiss = { showReceiptDialog = false }
         )
     }
 }

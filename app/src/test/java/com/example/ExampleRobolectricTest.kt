@@ -23,7 +23,7 @@ class ExampleRobolectricTest {
 
   @Test
   fun `app config has required rescue hotlines and issue types`() {
-    assertEquals("1900545566", AppConfig.DEFAULT_RESCUE_HOTLINE)
+    assertEquals("0898212031", AppConfig.DEFAULT_RESCUE_HOTLINE)
     assertTrue(AppConfig.ISSUE_TYPES.contains("Xe hết xăng"))
     assertTrue(AppConfig.ISSUE_TYPES.contains("Thủng lốp"))
     assertTrue(AppConfig.ISSUE_TYPES.contains("Hết bình"))
@@ -38,7 +38,7 @@ class ExampleRobolectricTest {
       addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     assertEquals(android.content.Intent.ACTION_DIAL, intent.action)
-    assertEquals("tel:1900545566", intent.data.toString())
+    assertEquals("tel:0898212031", intent.data.toString())
   }
 
   @Test
@@ -46,5 +46,27 @@ class ExampleRobolectricTest {
     val location = com.example.ui.components.RescueMapLocation(21.0285, 105.8542)
     assertEquals(21.0285, location.latitude, 0.0001)
     assertEquals(105.8542, location.longitude, 0.0001)
+  }
+
+  @Test
+  fun `rescue notification helper creates correct localized status notifications`() {
+    val req = com.example.data.model.RescueRequest(
+      id = "REQ_123456",
+      staffName = "KTV Toàn",
+      address = "Hà Nội",
+      issueType = "Hết bình"
+    )
+    val accepted = com.example.util.RescueNotificationHelper.getStatusNotificationContent(req, AppConfig.RequestStatus.ACCEPTED)
+    assertTrue(accepted.title.contains("KTV đã nhận đơn cứu hộ"))
+    assertTrue(accepted.message.contains("KTV Toàn"))
+
+    val enRoute = com.example.util.RescueNotificationHelper.getStatusNotificationContent(req, AppConfig.RequestStatus.EN_ROUTE)
+    assertTrue(enRoute.title.contains("KTV đang di chuyển"))
+
+    val arrived = com.example.util.RescueNotificationHelper.getStatusNotificationContent(req, AppConfig.RequestStatus.ARRIVED)
+    assertTrue(arrived.title.contains("KTV đã đến hiện trường"))
+
+    val completed = com.example.util.RescueNotificationHelper.getStatusNotificationContent(req, AppConfig.RequestStatus.COMPLETED)
+    assertTrue(completed.title.contains("Cứu hộ hoàn tất"))
   }
 }

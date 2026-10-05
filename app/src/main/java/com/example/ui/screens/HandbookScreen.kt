@@ -141,7 +141,7 @@ fun HandbookScreen(
 }
 
 @Composable
-private fun GuideAccordionCard(
+fun GuideAccordionCard(
     guide: HandbookGuide,
     isExpanded: Boolean,
     onToggle: () -> Unit
@@ -266,7 +266,7 @@ private fun GuideAccordionCard(
 }
 
 @Composable
-private fun DashboardLightCard(light: DashboardAlertLight) {
+fun DashboardLightCard(light: DashboardAlertLight) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -318,7 +318,7 @@ private fun DashboardLightCard(light: DashboardAlertLight) {
 }
 
 @Composable
-private fun HotlineCard(
+fun HotlineCard(
     hotline: HotlineContact,
     onCallPhone: (String) -> Unit
 ) {

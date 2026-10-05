@@ -1,8 +1,12 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -12,7 +16,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -22,8 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.config.AppConfig
-import com.example.ui.theme.AlertRed
-import com.example.ui.theme.RescuePrimary
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +41,7 @@ fun AuthScreen(
     authViewModel: AuthViewModel,
     onAuthSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Đăng nhập, 1: Đăng ký
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
 
@@ -57,11 +67,7 @@ fun AuthScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(errorMessage, successMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            authViewModel.clearMessages()
-        }
+    LaunchedEffect(successMessage) {
         successMessage?.let {
             snackbarHostState.showSnackbar(it)
             authViewModel.clearMessages()
@@ -109,40 +115,88 @@ fun AuthScreen(
             )
 
             Text(
-                text = "Hệ thống cứu hộ khẩn cấp kết nối Firebase Realtime",
+                text = "Hệ thống cứu hộ giao thông 24/7",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Tab Selector
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.testTag("auth_tab_row")
+            // Segmented Tab Selector (Grab / Gojek Style)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFF1F5F9),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("auth_tab_row")
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("Đăng Nhập", fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Đăng Ký", fontWeight = FontWeight.Bold) }
-                )
+                Row(
+                    modifier = Modifier.padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable {
+                                selectedTab = 0
+                                authViewModel.clearMessages()
+                            },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selectedTab == 0) Color.White else Color.Transparent,
+                        shadowElevation = if (selectedTab == 0) 2.dp else 0.dp
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Đăng Nhập",
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == 0) RescuePrimary else OnSurfaceVariantLight,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable {
+                                selectedTab = 1
+                                authViewModel.clearMessages()
+                            },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selectedTab == 1) Color.White else Color.Transparent,
+                        shadowElevation = if (selectedTab == 1) 2.dp else 0.dp
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Đăng Ký",
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == 1) RescuePrimary else OnSurfaceVariantLight,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (selectedTab == 0) {
                 // LOGIN FORM
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, BorderLight),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -152,7 +206,8 @@ fun AuthScreen(
                             value = loginEmail,
                             onValueChange = { loginEmail = it },
                             label = { Text("Email") },
-                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = RescuePrimary) },
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("input_login_email"),
@@ -164,7 +219,8 @@ fun AuthScreen(
                             value = loginPass,
                             onValueChange = { loginPass = it },
                             label = { Text("Mật khẩu") },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = RescuePrimary) },
+                            shape = RoundedCornerShape(12.dp),
                             trailingIcon = {
                                 IconButton(onClick = { loginPassVisible = !loginPassVisible }) {
                                     Icon(
@@ -190,9 +246,41 @@ fun AuthScreen(
                             }
                         }
 
+                        // Inline Error Alert
+                        if (!errorMessage.isNullOrBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = AlertRedLight,
+                                border = BorderStroke(1.dp, AlertRed.copy(alpha = 0.3f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("auth_error_banner")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = AlertRed, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = errorMessage ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AlertRedDark,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(
+                                        onClick = { authViewModel.clearMessages() },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Đóng", tint = AlertRedDark, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+
                         Button(
                             onClick = {
-                                authViewModel.signIn(loginEmail, loginPass, onSuccess = onAuthSuccess)
+                                authViewModel.signIn(loginEmail, loginPass, autoCreateIfNotFound = true, onSuccess = onAuthSuccess)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -208,14 +296,62 @@ fun AuthScreen(
                                 Text("ĐĂNG NHẬP", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             }
                         }
+
+                        // Divider
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "HOẶC",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                        }
+
+                        // Google Sign-In Button
+                        GoogleSignInButton(
+                            isLoading = isLoading,
+                            text = "Đăng nhập bằng Google",
+                            onClick = {
+                                authViewModel.signInWithGoogle(context, onSuccess = onAuthSuccess)
+                            }
+                        )
+
+                        // Switch to Register Prompt
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Chưa có tài khoản?", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(
+                                onClick = {
+                                    selectedTab = 1
+                                    regEmail = loginEmail
+                                    regPass = loginPass
+                                    regConfirmPass = loginPass
+                                    authViewModel.clearMessages()
+                                }
+                            ) {
+                                Text("Đăng ký ngay", color = RescuePrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
                     }
                 }
             } else {
                 // REGISTER FORM
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, BorderLight),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -357,6 +493,145 @@ fun AuthScreen(
                                 Text("TẠO TÀI KHOẢN MỚI", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             }
                         }
+
+                        // Divider
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "HOẶC",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                        }
+
+                        // Google Sign-In Button
+                        GoogleSignInButton(
+                            isLoading = isLoading,
+                            text = "Đăng ký nhanh bằng Google",
+                            onClick = {
+                                authViewModel.signInWithGoogle(context, onSuccess = onAuthSuccess)
+                            }
+                        )
+
+                        // Switch to Login Prompt
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Đã có tài khoản?", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(
+                                onClick = {
+                                    selectedTab = 0
+                                    loginEmail = regEmail
+                                    loginPass = regPass
+                                    authViewModel.clearMessages()
+                                }
+                            ) {
+                                Text("Đăng nhập ngay", color = RescuePrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Quick 1-Tap Access Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_demo_accounts"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.5.dp, BorderLight),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(20.dp))
+                        Text(
+                            text = "TRUY CẬP NHANH HỆ THỐNG CỨU HỘ",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Text(
+                        text = "Đăng nhập nhanh tiện lợi để sử dụng ngay các dịch vụ cứu hộ giao thông 24/7:",
+                        fontSize = 11.5.sp,
+                        color = OnSurfaceVariantLight,
+                        lineHeight = 16.sp
+                    )
+
+                    // Customer Direct Access
+                    Button(
+                        onClick = {
+                            authViewModel.signInDemo("USER", onSuccess = onAuthSuccess)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("btn_demo_user"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary),
+                        enabled = !isLoading
+                    ) {
+                        Icon(
+                            Icons.Default.DirectionsCar,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "KHÁCH HÀNG (CHỦ XE CẦN CỨU HỘ)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    // Technician / Staff Direct Access
+                    OutlinedButton(
+                        onClick = {
+                            authViewModel.signInDemo("STAFF", onSuccess = onAuthSuccess)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("btn_demo_staff"),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.5.dp, RescueSecondary),
+                        enabled = !isLoading
+                    ) {
+                        Icon(
+                            Icons.Default.Build,
+                            contentDescription = null,
+                            tint = RescueSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "KỸ THUẬT VIÊN / ĐỐI TÁC CỨU HỘ",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RescueSecondary
+                        )
                     }
                 }
             }
@@ -398,6 +673,75 @@ fun AuthScreen(
                     Text("Hủy")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun GoogleSignInButton(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    text: String = "Đăng nhập bằng Google"
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .testTag("btn_google_sign_in"),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        enabled = !isLoading
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            GoogleIcon(modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = text,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun GoogleIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension
+        val stroke = s * 0.22f
+        val blue = Color(0xFF4285F4)
+        val green = Color(0xFF34A853)
+        val yellow = Color(0xFFFBBC05)
+        val red = Color(0xFFEA4335)
+
+        val rect = Rect(stroke / 2, stroke / 2, s - stroke / 2, s - stroke / 2)
+        val style = Stroke(width = stroke, cap = StrokeCap.Butt)
+
+        // Red arc (top)
+        drawArc(red, 180f, 135f, false, topLeft = rect.topLeft, size = rect.size, style = style)
+        // Yellow arc (bottom-left)
+        drawArc(yellow, 135f, 90f, false, topLeft = rect.topLeft, size = rect.size, style = style)
+        // Green arc (bottom)
+        drawArc(green, 45f, 90f, false, topLeft = rect.topLeft, size = rect.size, style = style)
+        // Blue arc (right-bottom)
+        drawArc(blue, 315f, 90f, false, topLeft = rect.topLeft, size = rect.size, style = style)
+
+        // Center crossbar of 'G'
+        drawLine(
+            color = blue,
+            start = Offset(s / 2, s / 2),
+            end = Offset(s - stroke / 2, s / 2),
+            strokeWidth = stroke,
+            cap = StrokeCap.Square
         )
     }
 }

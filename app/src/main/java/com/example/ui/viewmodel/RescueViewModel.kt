@@ -232,8 +232,8 @@ class RescueViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     companion object {
-        const val PREDEFINED_RESCUE_HOTLINE = "1900545566"
-        const val PREDEFINED_RESCUE_HOTLINE_DISPLAY = "1900 545566"
+        const val PREDEFINED_RESCUE_HOTLINE = "0898212031"
+        const val PREDEFINED_RESCUE_HOTLINE_DISPLAY = "0898 212 031"
     }
 
     fun triggerEmergencySosDialer(context: Context, phoneNumber: String = PREDEFINED_RESCUE_HOTLINE) {

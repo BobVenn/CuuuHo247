@@ -35,6 +35,13 @@ class RescueApplication : Application() {
                 // Persistence might already be set or not supported in this process
                 Log.w(TAG, "Firebase Database setPersistenceEnabled notice: ${e.message}")
             }
+
+            // Initialize notification channels for real-time status alerts
+            try {
+                com.example.util.RescueNotificationHelper.initNotificationChannels(this)
+            } catch (ne: Exception) {
+                Log.w(TAG, "Notification channel initialization notice: ${ne.message}")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing Firebase in Application class: ${e.message}", e)
         }

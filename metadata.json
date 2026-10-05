@@ -1,5 +1,5 @@
 {
-  "name": "Cứu Hộ Xe 24/7",
+  "name": "Cứu Hộ 24/7",
   "description": "Ứng dụng cứu hộ xe khẩn cấp 24/7: cứu hộ ô tô, xe máy, kích bình ắc quy, vá vỏ lưu động, kéo cẩu xe, theo dõi cứu hộ trực tiếp và sổ tay xử lý sự cố.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

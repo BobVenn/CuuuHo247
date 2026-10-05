@@ -5,6 +5,7 @@ import com.example.data.config.AppConfig
 import com.example.data.model.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -35,14 +36,19 @@ class FirebaseManager private constructor() {
         throw e
     }
 
-    // Explicitly connect to the project's Realtime Database URL
+    // Connect to FirebaseDatabase instance safely
     val database: FirebaseDatabase = try {
-        FirebaseDatabase.getInstance(AppConfig.FIREBASE_DATABASE_URL).apply {
-            Log.i(TAG, "FirebaseDatabase instance connected to ${AppConfig.FIREBASE_DATABASE_URL}")
+        FirebaseDatabase.getInstance().apply {
+            Log.i(TAG, "FirebaseDatabase instance connected to default URL")
         }
     } catch (e: Exception) {
-        Log.e(TAG, "Failed to get FirebaseDatabase instance: ${e.message}", e)
-        FirebaseDatabase.getInstance()
+        Log.e(TAG, "Failed to get default FirebaseDatabase, trying custom URL: ${e.message}", e)
+        try {
+            FirebaseDatabase.getInstance(AppConfig.FIREBASE_DATABASE_URL)
+        } catch (e2: Exception) {
+            Log.e(TAG, "Failed to get custom FirebaseDatabase instance: ${e2.message}", e2)
+            FirebaseDatabase.getInstance()
+        }
     }
 
     val requestsRef: DatabaseReference = database.getReference("requests")
@@ -50,6 +56,7 @@ class FirebaseManager private constructor() {
     val ratingsRef: DatabaseReference = database.getReference("ratings")
     val reportsRef: DatabaseReference = database.getReference("reports")
     val usersRef: DatabaseReference = database.getReference("users")
+    val staffApplicationsRef: DatabaseReference = database.getReference("staff_applications")
 
     // -------------------------------------------------------------
     // AUTHENTICATION
@@ -76,6 +83,43 @@ class FirebaseManager private constructor() {
             Result.success(user)
         } catch (e: Exception) {
             Log.e(TAG, "signIn failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithGoogleIdToken(idToken: String): Result<FirebaseUser> {
+        return try {
+            Log.i(TAG, "Attempting signInWithGoogleIdToken")
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = auth.signInWithCredential(credential).await()
+            val user = result.user ?: throw Exception("Không thể lấy thông tin người dùng Google")
+            Log.i(TAG, "signInWithGoogle successful: ${user.uid}")
+
+            // Check if profile exists; if not, create default profile
+            try {
+                val snapshot = usersRef.child(user.uid).get().await()
+                if (!snapshot.exists()) {
+                    val profile = UserProfile(
+                        uid = user.uid,
+                        email = user.email ?: "",
+                        displayName = user.displayName ?: "Người dùng Google",
+                        phone = user.phoneNumber ?: "",
+                        role = AppConfig.UserRole.USER,
+                        vehicleType = AppConfig.VEHICLE_TYPES[0],
+                        vehicleName = "",
+                        licensePlate = "",
+                        createdAt = System.currentTimeMillis()
+                    )
+                    usersRef.child(user.uid).setValue(profile.toMap()).await()
+                    Log.i(TAG, "Created default profile for Google user: ${user.uid}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Notice checking/creating Google user profile: ${e.message}")
+            }
+
+            Result.success(user)
+        } catch (e: Exception) {
+            Log.e(TAG, "signInWithGoogle failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -152,6 +196,8 @@ class FirebaseManager private constructor() {
                     val vType = snapshot.child("vehicleType").getValue(String::class.java) ?: "Ô tô 4-7 chỗ"
                     val vName = snapshot.child("vehicleName").getValue(String::class.java) ?: ""
                     val plate = snapshot.child("licensePlate").getValue(String::class.java) ?: ""
+                    val pStatus = snapshot.child("partnerStatus").getValue(String::class.java) ?: AppConfig.PartnerApplicationStatus.NONE
+                    val pReason = snapshot.child("partnerRejectionReason").getValue(String::class.java)
                     val created = snapshot.child("createdAt").getValue(Long::class.java) ?: System.currentTimeMillis()
 
                     val profile = UserProfile(
@@ -163,6 +209,8 @@ class FirebaseManager private constructor() {
                         vehicleType = vType,
                         vehicleName = vName,
                         licensePlate = plate,
+                        partnerStatus = pStatus,
+                        partnerRejectionReason = pReason,
                         createdAt = created
                     )
                     trySend(profile)
@@ -317,6 +365,33 @@ class FirebaseManager private constructor() {
         }
     }
 
+    suspend fun updatePaymentStatus(requestId: String, paymentStatus: String): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any?>("paymentStatus" to paymentStatus)
+            requestsRef.child(requestId).updateChildren(updates).await()
+            Log.i(TAG, "updatePaymentStatus successful for $requestId to $paymentStatus")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "updatePaymentStatus failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitRating(requestId: String, rating: Int, comment: String): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any?>(
+                "rating" to rating,
+                "ratingComment" to comment
+            )
+            requestsRef.child(requestId).updateChildren(updates).await()
+            Log.i(TAG, "submitRating successful for $requestId with rating $rating")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "submitRating failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
     private fun parseRescueRequest(snapshot: DataSnapshot): RescueRequest? {
         if (!snapshot.exists()) return null
         val id = snapshot.key ?: snapshot.child("id").getValue(String::class.java) ?: ""
@@ -351,6 +426,8 @@ class FirebaseManager private constructor() {
             is Number -> costVal.toLong()
             else -> null
         }
+        val paymentStatus = snapshot.child("paymentStatus").getValue(String::class.java) ?: "UNPAID"
+        val imageUrl = snapshot.child("imageUrl").getValue(String::class.java)
         val time = when (val timeVal = snapshot.child("timestamp").value) {
             is Long -> timeVal
             is Number -> timeVal.toLong()
@@ -376,6 +453,8 @@ class FirebaseManager private constructor() {
             staffName = staffName,
             staffPhone = staffPhone,
             cost = cost,
+            paymentStatus = paymentStatus,
+            imageUrl = imageUrl,
             timestamp = time,
             rating = rating,
             ratingComment = ratingComment
@@ -562,6 +641,138 @@ class FirebaseManager private constructor() {
         } catch (e: Exception) {
             Log.e(TAG, "createReport failed: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    // -------------------------------------------------------------
+    // STAFF & PARTNER APPLICATIONS (Node: "staff_applications")
+    // -------------------------------------------------------------
+
+    suspend fun submitStaffApplication(application: StaffApplication): Result<Unit> {
+        return try {
+            val key = application.userId.ifBlank { staffApplicationsRef.push().key ?: System.currentTimeMillis().toString() }
+            val appWithId = application.copy(id = key)
+            staffApplicationsRef.child(key).setValue(appWithId.toMap()).await()
+            // Update user's partnerStatus in users node
+            usersRef.child(application.userId).updateChildren(
+                mapOf(
+                    "partnerStatus" to AppConfig.PartnerApplicationStatus.PENDING,
+                    "partnerRejectionReason" to null
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "submitStaffApplication failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun getStaffApplicationFlow(userId: String): Flow<StaffApplication?> = callbackFlow {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    trySend(parseStaffApplication(snapshot))
+                } else {
+                    trySend(null)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "getStaffApplicationFlow cancelled: ${error.message}")
+                trySend(null)
+                close()
+            }
+        }
+        val ref = staffApplicationsRef.child(userId)
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
+    fun getAllStaffApplicationsFlow(): Flow<List<StaffApplication>> = callbackFlow {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<StaffApplication>()
+                for (child in snapshot.children) {
+                    val app = parseStaffApplication(child)
+                    if (app != null) {
+                        list.add(app)
+                    }
+                }
+                list.sortByDescending { it.appliedAt }
+                trySend(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "getAllStaffApplicationsFlow cancelled: ${error.message}")
+                trySend(emptyList())
+                close()
+            }
+        }
+        staffApplicationsRef.addValueEventListener(listener)
+        awaitClose { staffApplicationsRef.removeEventListener(listener) }
+    }
+
+    suspend fun reviewStaffApplication(
+        userId: String,
+        approve: Boolean,
+        reason: String? = null,
+        reviewerName: String = "Admin Tổng Đài"
+    ): Result<Unit> {
+        return try {
+            val now = System.currentTimeMillis()
+            val newStatus = if (approve) AppConfig.PartnerApplicationStatus.APPROVED else AppConfig.PartnerApplicationStatus.REJECTED
+            val updates = mapOf<String, Any?>(
+                "status" to newStatus,
+                "reviewedAt" to now,
+                "reviewedBy" to reviewerName,
+                "rejectionReason" to reason
+            )
+            staffApplicationsRef.child(userId).updateChildren(updates).await()
+
+            // Update user role and partner status
+            val userUpdates = mutableMapOf<String, Any?>(
+                "partnerStatus" to newStatus,
+                "partnerRejectionReason" to reason
+            )
+            if (approve) {
+                userUpdates["role"] = AppConfig.UserRole.STAFF
+            }
+            usersRef.child(userId).updateChildren(userUpdates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "reviewStaffApplication failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    private fun parseStaffApplication(snapshot: DataSnapshot): StaffApplication? {
+        return try {
+            StaffApplication(
+                id = snapshot.child("id").getValue(String::class.java) ?: snapshot.key ?: "",
+                userId = snapshot.child("userId").getValue(String::class.java) ?: "",
+                userName = snapshot.child("userName").getValue(String::class.java) ?: "",
+                userEmail = snapshot.child("userEmail").getValue(String::class.java) ?: "",
+                phone = snapshot.child("phone").getValue(String::class.java) ?: "",
+                idCardNumber = snapshot.child("idCardNumber").getValue(String::class.java) ?: "",
+                operatingArea = snapshot.child("operatingArea").getValue(String::class.java) ?: "",
+                companyOrGarageName = snapshot.child("companyOrGarageName").getValue(String::class.java) ?: "",
+                taxOrBusinessCode = snapshot.child("taxOrBusinessCode").getValue(String::class.java) ?: "",
+                garageAddress = snapshot.child("garageAddress").getValue(String::class.java) ?: "",
+                operatingRadiusKm = snapshot.child("operatingRadiusKm").getValue(Int::class.java) ?: 20,
+                rescueVehicleType = snapshot.child("rescueVehicleType").getValue(String::class.java) ?: "Xe cẩu sàn trượt",
+                vehiclePlate = snapshot.child("vehiclePlate").getValue(String::class.java) ?: "",
+                servicesOffered = snapshot.child("servicesOffered").getValue(String::class.java) ?: "Cứu hộ xe",
+                documentsInfo = snapshot.child("documentsInfo").getValue(String::class.java) ?: "Đã xác thực",
+                documentImageUris = snapshot.child("documentImageUris").getValue(String::class.java) ?: "",
+                status = snapshot.child("status").getValue(String::class.java) ?: AppConfig.PartnerApplicationStatus.PENDING,
+                rejectionReason = snapshot.child("rejectionReason").getValue(String::class.java),
+                appliedAt = snapshot.child("appliedAt").getValue(Long::class.java) ?: System.currentTimeMillis(),
+                reviewedAt = snapshot.child("reviewedAt").getValue(Long::class.java),
+                reviewedBy = snapshot.child("reviewedBy").getValue(String::class.java)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "parseStaffApplication error: ${e.message}", e)
+            null
         }
     }
 }

@@ -433,8 +433,20 @@ fun TrackingScreen(
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.LocationOn, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(18.dp))
-                                Text("Địa điểm: ", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                Text(activeRequest.locationAddress, fontSize = 13.sp, maxLines = 1)
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Địa điểm: ", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        Text(activeRequest.locationAddress, fontSize = 13.sp, maxLines = 1)
+                                    }
+                                    if (activeRequest.latitude != 0.0 && activeRequest.longitude != 0.0) {
+                                        Text(
+                                            text = "Tọa độ GPS: ${String.format(Locale.US, "%.6f, %.6f", activeRequest.latitude, activeRequest.longitude)}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Payments, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(18.dp))

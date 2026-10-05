@@ -120,7 +120,8 @@ object RescueDataCatalog {
     )
 
     val hotlines = listOf(
-        HotlineContact("Tổng đài Cứu hộ Giao thông Quốc gia", "1900545566", "Phục vụ 24/7 trên toàn quốc, điều phối xe cứu hộ gần nhất", true),
+        HotlineContact("Đường dây nóng Cứu hộ Khẩn cấp 24/7", "0898212031", "Hotline trực ban khẩn cấp 24/7, điều phối đội xe cứu hộ gần nhất", true),
+        HotlineContact("Tổng đài Cứu hộ Giao thông Quốc gia", "1900545566", "Phục vụ 24/7 trên toàn quốc, điều phối xe cứu hộ gần nhất", false),
         HotlineContact("Cứu hộ Cao tốc Bắc - Nam & Nội Bài Lào Cai", "19006489", "Đơn vị quản lý và cứu hộ chuyên trách đường cao tốc VEC", true),
         HotlineContact("Cảnh sát Giao thông Khẩn cấp", "113", "Báo cáo tai nạn, ùn tắc nghiêm trọng và điều phối hiện trường", true),
         HotlineContact("Cứu thương Y tế Khẩn cấp", "115", "Hỗ trợ y tế khi có người bị thương trong sự cố giao thông", true),

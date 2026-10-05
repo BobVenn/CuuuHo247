@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,9 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.config.AppConfig
 import com.example.data.model.RescueRequest
-import com.example.ui.theme.AlertRed
-import com.example.ui.theme.RescuePrimary
-import com.example.ui.theme.SafeGreen
+import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -140,8 +139,10 @@ fun HistoryScreen(
                                 .fillMaxWidth()
                                 .clickable { onRequestClick(req) }
                                 .testTag("history_item_${req.id}"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = BorderStroke(1.dp, BorderLight),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -204,12 +205,33 @@ fun HistoryScreen(
                                         )
 
                                         if (req.cost != null && req.cost > 0) {
-                                            Text(
-                                                text = currencyFormat.format(req.cost),
-                                                fontWeight = FontWeight.Bold,
-                                                color = SafeGreen,
-                                                fontSize = 13.sp
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = currencyFormat.format(req.cost),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = SafeGreen,
+                                                    fontSize = 13.sp
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = if (req.paymentStatus.startsWith("PAID")) SafeGreen.copy(alpha = 0.15f) else EmergencyGold.copy(alpha = 0.15f)
+                                                ) {
+                                                    Text(
+                                                        text = when (req.paymentStatus) {
+                                                            "PAID_VIETQR" -> "VietQR ✓"
+                                                            "PAID_CASH" -> "Tiền mặt ✓"
+                                                            else -> "Chưa TT"
+                                                        },
+                                                        color = if (req.paymentStatus.startsWith("PAID")) SafeGreen else Color(0xFFB45309),
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }

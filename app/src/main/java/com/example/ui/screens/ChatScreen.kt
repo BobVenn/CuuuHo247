@@ -3,12 +3,14 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +26,7 @@ import com.example.data.model.ChatMessage
 import com.example.data.model.RescueRequest
 import com.example.data.model.UserProfile
 import com.example.ui.theme.RescuePrimary
+import com.example.ui.theme.SafeGreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,7 +38,8 @@ fun ChatScreen(
     currentUserProfile: UserProfile?,
     chatMessages: List<ChatMessage>,
     onBack: () -> Unit,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    onCallUser: (() -> Unit)? = null
 ) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -74,6 +78,13 @@ fun ChatScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
+                actions = {
+                    if (onCallUser != null) {
+                        IconButton(onClick = onCallUser) {
+                            Icon(Icons.Default.Phone, contentDescription = "Gọi thoại qua App", tint = SafeGreen)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
@@ -84,13 +95,42 @@ fun ChatScreen(
                     .fillMaxWidth()
                     .imePadding()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column {
+                    // Quick Canned Emergency Chips
+                    val quickMessages = listOf(
+                        "Tôi đang đứng ở lề đường bên phải",
+                        "Khoảng bao lâu nữa anh tới?",
+                        "Xe của tôi không đề nổ được",
+                        "Anh mang giúp dây câu bình nhé",
+                        "Tôi đã bật đèn hazard cảnh báo",
+                        "Tôi đã gửi vị trí chính xác trên bản đồ"
+                    )
+
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(quickMessages) { quickText ->
+                            SuggestionChip(
+                                onClick = { onSendMessage(quickText) },
+                                label = { Text(quickText, fontSize = 11.5.sp) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
@@ -114,6 +154,7 @@ fun ChatScreen(
                     ) {
                         Icon(Icons.Default.Send, contentDescription = "Gửi", tint = Color.White)
                     }
+                }
                 }
             }
         }

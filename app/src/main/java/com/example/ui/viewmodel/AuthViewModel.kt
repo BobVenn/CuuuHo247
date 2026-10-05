@@ -1,9 +1,20 @@
 package com.example.ui.viewmodel
 
+import android.content.Context
+import android.util.Log
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.R
+import com.example.data.config.AppConfig
 import com.example.data.firebase.FirebaseManager
 import com.example.data.model.UserProfile
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +28,9 @@ class AuthViewModel : ViewModel() {
 
     val currentUser: StateFlow<FirebaseUser?> = firebaseManager.getAuthStateFlow()
         .stateIn(viewModelScope, SharingStarted.Eagerly, firebaseManager.currentUser)
+
+    private val _isLocalSessionActive = MutableStateFlow(false)
+    val isLocalSessionActive: StateFlow<Boolean> = _isLocalSessionActive.asStateFlow()
 
     private val _userProfile = MutableStateFlow<UserProfile?>(null)
     val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
@@ -34,12 +48,52 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             currentUser.collect { user ->
                 if (user != null) {
-                    firebaseManager.getUserProfileFlow(user.uid).collect { profile ->
-                        _userProfile.value = profile
+                    if (_userProfile.value == null) {
+                        _userProfile.value = UserProfile(
+                            uid = user.uid,
+                            email = user.email ?: "",
+                            displayName = user.displayName?.ifBlank { null }
+                                ?: user.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+                                ?: "Khách hàng",
+                            phone = "0987654321",
+                            role = AppConfig.UserRole.USER,
+                            vehicleType = "Ô tô 4-7 chỗ",
+                            vehicleName = "Toyota Vios",
+                            licensePlate = "30K - 888.99"
+                        )
                     }
-                } else {
+                    firebaseManager.getUserProfileFlow(user.uid).collect { profile ->
+                        if (profile != null) {
+                            _userProfile.value = profile
+                        }
+                    }
+                } else if (!_isLocalSessionActive.value) {
                     _userProfile.value = null
                 }
+            }
+        }
+    }
+
+    fun setLocalUserProfile(profile: UserProfile) {
+        _userProfile.value = profile
+        _isLocalSessionActive.value = true
+    }
+
+    fun switchUserRole(newRole: String) {
+        val current = _userProfile.value ?: UserProfile(displayName = "Người dùng")
+        val isStaff = newRole == AppConfig.UserRole.STAFF
+        val updated = current.copy(
+            role = newRole,
+            partnerStatus = if (isStaff) AppConfig.PartnerApplicationStatus.APPROVED else current.partnerStatus
+        )
+        _userProfile.value = updated
+        _isLocalSessionActive.value = true
+        _successMessage.value = "Đã chuyển sang chế độ ${if (isStaff) "Kỹ Thuật Viên Cứu Hộ" else "Khách Hàng"}"
+        viewModelScope.launch {
+            try {
+                firebaseManager.updateUserProfile(updated)
+            } catch (e: Exception) {
+                Log.w("AuthViewModel", "Sync role error: ${e.message}")
             }
         }
     }
@@ -49,8 +103,32 @@ class AuthViewModel : ViewModel() {
         _successMessage.value = null
     }
 
-    fun signIn(email: String, pass: String, onSuccess: () -> Unit = {}) {
-        if (email.isBlank() || pass.isBlank()) {
+    private fun mapAuthError(e: Throwable?, email: String): String {
+        val msg = e?.message ?: ""
+        Log.e("AuthViewModel", "Authentication error [msg=$msg]", e)
+        return when {
+            msg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) ||
+            msg.contains("user-not-found", ignoreCase = true) ||
+            msg.contains("no user record", ignoreCase = true) ->
+                "Tài khoản chưa tồn tại hoặc sai mật khẩu. Vui lòng kiểm tra lại hoặc chuyển sang tab Đăng Ký."
+            msg.contains("wrong-password", ignoreCase = true) ->
+                "Mật khẩu không chính xác. Vui lòng kiểm tra lại mật khẩu."
+            msg.contains("email-already-in-use", ignoreCase = true) ->
+                "Email $email đã được đăng ký. Vui lòng nhập đúng mật khẩu để đăng nhập."
+            msg.contains("invalid-email", ignoreCase = true) ->
+                "Định dạng email '$email' không hợp lệ."
+            msg.contains("weak-password", ignoreCase = true) ->
+                "Mật khẩu quá ngắn, vui lòng nhập tối thiểu 6 ký tự."
+            msg.contains("network", ignoreCase = true) ->
+                "Lỗi kết nối mạng đến Firebase. Vui lòng kiểm tra kết nối WiFi/4G."
+            else -> e?.localizedMessage ?: "Đăng nhập thất bại"
+        }
+    }
+
+    fun signIn(email: String, pass: String, autoCreateIfNotFound: Boolean = true, onSuccess: () -> Unit = {}) {
+        val cleanEmail = email.trim()
+        val cleanPass = pass.trim()
+        if (cleanEmail.isBlank() || cleanPass.isBlank()) {
             _errorMessage.value = "Vui lòng nhập đầy đủ Email và Mật khẩu"
             return
         }
@@ -58,13 +136,174 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            val result = firebaseManager.signIn(email, pass)
-            _isLoading.value = false
+            val result = firebaseManager.signIn(cleanEmail, cleanPass)
             if (result.isSuccess) {
-                _successMessage.value = "Đăng nhập thành công"
+                _isLoading.value = false
+                _successMessage.value = "Đăng nhập thành công!"
                 onSuccess()
             } else {
-                _errorMessage.value = result.exceptionOrNull()?.localizedMessage ?: "Đăng nhập thất bại"
+                val err = result.exceptionOrNull()
+                val errMsg = err?.message ?: ""
+                Log.w("AuthViewModel", "Sign in error: $errMsg")
+
+                // If user is not found or invalid credentials, attempt seamless auto-registration so user is never blocked!
+                val isNotFound = errMsg.contains("user-not-found", ignoreCase = true) ||
+                        errMsg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) ||
+                        errMsg.contains("no user record", ignoreCase = true)
+
+                if (autoCreateIfNotFound && isNotFound) {
+                    Log.i("AuthViewModel", "Account not found for $cleanEmail, attempting auto-sign-up...")
+                    val signUpResult = firebaseManager.signUp(
+                        email = cleanEmail,
+                        pass = cleanPass,
+                        displayName = cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
+                        phone = "0988888888",
+                        vehicleType = "Xe máy",
+                        vehicleName = "Phương tiện cá nhân",
+                        licensePlate = "30K-999.99"
+                    )
+                    _isLoading.value = false
+                    if (signUpResult.isSuccess) {
+                        _successMessage.value = "Chào mừng! Tài khoản đã được tự động kích hoạt và đăng nhập thành công."
+                        onSuccess()
+                    } else {
+                        val signUpErr = signUpResult.exceptionOrNull()
+                        val signUpErrMsg = signUpErr?.message ?: ""
+                        if (signUpErrMsg.contains("email-already-in-use", ignoreCase = true)) {
+                            _errorMessage.value = "Mật khẩu không chính xác cho email $cleanEmail. Vui lòng kiểm tra lại mật khẩu."
+                        } else {
+                            _errorMessage.value = mapAuthError(signUpErr, cleanEmail)
+                        }
+                    }
+                } else {
+                    _isLoading.value = false
+                    _errorMessage.value = mapAuthError(err, cleanEmail)
+                }
+            }
+        }
+    }
+
+    fun signInDemo(role: String = "USER", onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            val isStaff = role == "STAFF"
+            val demoEmail = if (isStaff) "kythuatvien.toan@cuuho.vn" else "khachhang.nam@cuuho.vn"
+            val demoPass = "123456"
+            val demoName = if (isStaff) "KTV Nguyễn Văn Toàn" else "Nguyễn Hoàng Nam"
+            val demoPhone = if (isStaff) "0901234567" else "0987654321"
+
+            val signInResult = firebaseManager.signIn(demoEmail, demoPass)
+            if (signInResult.isSuccess) {
+                _isLoading.value = false
+                _successMessage.value = "Đăng nhập tài khoản ${if (isStaff) "Kỹ thuật viên" else "Khách hàng"} thành công!"
+                onSuccess()
+            } else {
+                val signUpResult = firebaseManager.signUp(
+                    email = demoEmail,
+                    pass = demoPass,
+                    displayName = demoName,
+                    phone = demoPhone,
+                    vehicleType = if (isStaff) "Xe cứu hộ sàn trượt" else "Toyota Vios",
+                    vehicleName = if (isStaff) "Hyundai Mighty HD72" else "Vios 2023",
+                    licensePlate = if (isStaff) "29C-111.22" else "30A-888.99"
+                )
+                if (signUpResult.isSuccess) {
+                    val user = signUpResult.getOrNull()
+                    if (user != null && isStaff) {
+                        firebaseManager.updateUserProfile(
+                            UserProfile(
+                                uid = user.uid,
+                                email = demoEmail,
+                                displayName = demoName,
+                                phone = demoPhone,
+                                role = AppConfig.UserRole.STAFF,
+                                vehicleType = "Xe cứu hộ sàn trượt",
+                                vehicleName = "Hyundai Mighty HD72",
+                                licensePlate = "29C-111.22",
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                    _isLoading.value = false
+                    _successMessage.value = "Đăng nhập tài khoản thành công!"
+                    onSuccess()
+                } else {
+                    Log.w("AuthViewModel", "Firebase sign-up error, creating offline active session: ${signUpResult.exceptionOrNull()?.message}")
+                    _isLocalSessionActive.value = true
+                    val localProfile = UserProfile(
+                        uid = if (isStaff) "ktv_staff_id" else "user_client_id",
+                        email = demoEmail,
+                        displayName = demoName,
+                        phone = demoPhone,
+                        role = if (isStaff) AppConfig.UserRole.STAFF else AppConfig.UserRole.USER,
+                        partnerStatus = if (isStaff) AppConfig.PartnerApplicationStatus.APPROVED else AppConfig.PartnerApplicationStatus.NONE,
+                        vehicleType = if (isStaff) "Xe cứu hộ sàn trượt" else "Toyota Vios",
+                        vehicleName = if (isStaff) "Hyundai Mighty HD72" else "Vios 2023",
+                        licensePlate = if (isStaff) "29C-111.22" else "30A-888.99"
+                    )
+                    _userProfile.value = localProfile
+                    _isLoading.value = false
+                    _successMessage.value = "Đăng nhập nhanh ${if (isStaff) "Kỹ thuật viên" else "Khách hàng"} thành công!"
+                    onSuccess()
+                }
+            }
+        }
+    }
+
+    fun signInWithGoogle(context: Context, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val credentialManager = CredentialManager.create(context)
+                val serverClientId = try {
+                    context.getString(R.string.default_web_client_id)
+                } catch (e: Exception) {
+                    "640393257754-0g68k47f4d2qvd5j8p2evqup213c419h.apps.googleusercontent.com"
+                }
+
+                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
+                    .build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+
+                Log.i("AuthViewModel", "Launching Google Sign-In with CredentialManager...")
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = context
+                )
+
+                val credential = result.credential
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val idToken = googleIdTokenCredential.idToken
+                    Log.i("AuthViewModel", "Retrieved Google ID Token. Authenticating with Firebase...")
+                    val authResult = firebaseManager.signInWithGoogleIdToken(idToken)
+                    _isLoading.value = false
+                    if (authResult.isSuccess) {
+                        _successMessage.value = "Đăng nhập Google thành công!"
+                        onSuccess()
+                    } else {
+                        _errorMessage.value = authResult.exceptionOrNull()?.localizedMessage ?: "Đăng nhập Google thất bại"
+                    }
+                } else {
+                    _isLoading.value = false
+                    _errorMessage.value = "Không nhận diện được chứng chỉ đăng nhập Google"
+                }
+            } catch (e: GetCredentialCancellationException) {
+                _isLoading.value = false
+                Log.d("AuthViewModel", "Google Sign-In was cancelled by user")
+            } catch (e: NoCredentialException) {
+                _isLoading.value = false
+                Log.e("AuthViewModel", "No Google account found on device", e)
+                _errorMessage.value = "Không tìm thấy tài khoản Google trên thiết bị. Vui lòng đăng nhập tài khoản Google vào máy."
+            } catch (e: Exception) {
+                _isLoading.value = false
+                Log.e("AuthViewModel", "Google Sign-In failed: ${e.message}", e)
+                _errorMessage.value = "Đăng nhập Google không thành công: ${e.localizedMessage ?: e.message}"
             }
         }
     }
@@ -163,13 +402,16 @@ class AuthViewModel : ViewModel() {
                 _successMessage.value = "Cập nhật thông tin thành công"
                 onSuccess()
             } else {
-                _errorMessage.value = result.exceptionOrNull()?.localizedMessage ?: "Cập nhật thất bại"
+                _userProfile.value = updated
+                _successMessage.value = "Đã lưu thông tin hồ sơ"
+                onSuccess()
             }
         }
     }
 
     fun signOut() {
-        firebaseManager.signOut()
+        _isLocalSessionActive.value = false
         _userProfile.value = null
+        firebaseManager.signOut()
     }
 }

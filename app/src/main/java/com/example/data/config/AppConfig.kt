@@ -5,14 +5,14 @@ package com.example.data.config
  * Bạn có thể dễ dàng thay đổi số điện thoại hotline cứu hộ, URL Firebase, và các danh mục tại đây.
  */
 object AppConfig {
-    // Firebase Project & Database URL
-    const val FIREBASE_PROJECT_ID = "cuu-ho-xe-ef502"
-    const val FIREBASE_DATABASE_URL = "https://cuu-ho-xe-ef502-default-rtdb.firebaseio.com/"
+    // Firebase Project & Database Configuration
+    const val FIREBASE_PROJECT_ID = "gen-lang-client-0618945200"
+    const val FIREBASE_DATABASE_URL = "https://gen-lang-client-0618945200-default-rtdb.firebaseio.com/"
 
-    // Số điện thoại cứu hộ khẩn cấp mặc định (Tổng đài Cứu hộ Giao thông 24/7)
-    // Người dùng có thể tùy biến hoặc cấu hình số hotline của đơn vị cứu hộ
-    const val DEFAULT_RESCUE_HOTLINE = "1900545566"
-    const val RESCUE_HOTLINE_DISPLAY = "1900 545566"
+    // Số điện thoại cứu hộ khẩn cấp mặc định (Đường dây nóng cứu hộ khẩn cấp 24/7)
+    // Hotline cài đặt trước: 0898212031
+    const val DEFAULT_RESCUE_HOTLINE = "0898212031"
+    const val RESCUE_HOTLINE_DISPLAY = "0898 212 031"
 
     // Các loại sự cố cứu hộ theo yêu cầu
     val ISSUE_TYPES = listOf(
@@ -51,6 +51,14 @@ object AppConfig {
         const val USER = "User"
         const val STAFF = "Rescue Staff"
         const val ADMIN = "Admin"
+    }
+
+    // Trạng thái hồ sơ đối tác / thợ cứu hộ
+    object PartnerApplicationStatus {
+        const val NONE = "NONE"
+        const val PENDING = "PENDING"
+        const val APPROVED = "APPROVED"
+        const val REJECTED = "REJECTED"
     }
 
     // Các loại phương tiện

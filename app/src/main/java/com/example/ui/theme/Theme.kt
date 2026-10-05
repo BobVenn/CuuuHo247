@@ -38,33 +38,27 @@ private val LightColorScheme = lightColorScheme(
     onPrimaryContainer = RescuePrimaryDark,
     secondary = RescueSecondary,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE2E8F0),
+    secondaryContainer = Color(0xFFF1F5F9),
     onSecondaryContainer = Color(0xFF0F172A),
     tertiary = AlertRed,
     onTertiary = Color.White,
     background = SurfaceLight,
     onBackground = OnSurfaceLight,
-    surface = SurfaceLight,
+    surface = SurfaceContainerLight,
     onSurface = OnSurfaceLight,
-    surfaceVariant = Color(0xFFF1F5F9),
+    surfaceVariant = Color(0xFFF8FAFC),
     onSurfaceVariant = OnSurfaceVariantLight,
-    outline = BorderLight
+    outline = BorderLight,
+    outlineVariant = Color(0xFFE2E8F0)
 )
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Enforce crisp white background by default as requested
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
