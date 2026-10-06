@@ -857,6 +857,7 @@ fun RequestDetailScreen(
             requestId = request.id,
             cost = request.cost ?: 250000L,
             issueType = request.issueType,
+            isTechnicianView = isStaffOrAdmin,
             onDismiss = { showVietQrDialog = false },
             onConfirmPayment = { method ->
                 showVietQrDialog = false

@@ -159,7 +159,7 @@ fun CreateRequestDialog(
                                 fontWeight = FontWeight.Black
                             )
                             Text(
-                                text = "Lưu & điều phối qua Firebase Realtime Database",
+                                text = "Kết nối cứu hộ 24/7 • Điều phối kỹ thuật viên gần nhất",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -564,7 +564,7 @@ fun CreateRequestDialog(
                     }
                 }
 
-                // SUBMIT BUTTON (GỬI LÊN FIREBASE REALTIME DATABASE)
+                // SUBMIT BUTTON (XÁC NHẬN ĐẶT CỨU HỘ)
                 Button(
                     onClick = {
                         isSubmitting = true
@@ -591,12 +591,12 @@ fun CreateRequestDialog(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("ĐANG GỬI LÊN FIREBASE...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("ĐANG ĐẶT CỨU HỘ...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     } else {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.FlashOn, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "GỬI YÊU CẦU LÊN FIREBASE",
+                            text = "XÁC NHẬN ĐẶT CỨU HỘ NGAY",
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp
                         )

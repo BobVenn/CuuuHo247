@@ -36,6 +36,7 @@ fun VietQrPaymentDialog(
     requestId: String,
     cost: Long,
     issueType: String,
+    isTechnicianView: Boolean = false,
     onDismiss: () -> Unit,
     onConfirmPayment: (paymentMethod: String) -> Unit // "VIETQR" or "CASH"
 ) {
@@ -95,8 +96,16 @@ fun VietQrPaymentDialog(
                             }
                         }
                         Column {
-                            Text("Thanh Toán Cứu Hộ", fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            Text("Đơn #$transferContent", fontSize = 11.sp, color = OnSurfaceVariantLight)
+                            Text(
+                                text = if (isTechnicianView) "Thu Cước Cứu Hộ (KTV)" else "Thanh Toán Cứu Hộ",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = if (isTechnicianView) "Đưa mã cho khách quét hoặc thu tiền mặt" else "Đơn #$transferContent",
+                                fontSize = 11.sp,
+                                color = OnSurfaceVariantLight
+                            )
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -115,7 +124,12 @@ fun VietQrPaymentDialog(
                         modifier = Modifier.padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("TỔNG CHI PHÍ DỊCH VỤ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF166534))
+                        Text(
+                            text = if (isTechnicianView) "TỔNG CƯỚC THU TỪ KHÁCH HÀNG" else "TỔNG CHI PHÍ DỊCH VỤ CẦN TRẢ",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF166534)
+                        )
                         Text(
                             text = currencyFormat.format(cost),
                             fontSize = 24.sp,
@@ -282,13 +296,17 @@ fun VietQrPaymentDialog(
                         ) {
                             Icon(Icons.Default.Payments, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(40.dp))
                             Text(
-                                "Thanh Toán Bằng Tiền Mặt",
+                                text = if (isTechnicianView) "Thu Tiền Mặt Trực Tiếp" else "Thanh Toán Bằng Tiền Mặt",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = Color(0xFF92400E)
                             )
                             Text(
-                                "Vui lòng thanh toán trực tiếp số tiền ${currencyFormat.format(cost)} cho Kỹ thuật viên sau khi hoàn thành công việc cứu hộ.",
+                                text = if (isTechnicianView) {
+                                    "Thu trực tiếp số tiền ${currencyFormat.format(cost)} tiền mặt từ khách hàng tại hiện trường sau khi hoàn tất cứu hộ."
+                                } else {
+                                    "Vui lòng gửi trực tiếp số tiền ${currencyFormat.format(cost)} cho Kỹ thuật viên sau khi hoàn thành công việc cứu hộ."
+                                },
                                 fontSize = 12.sp,
                                 color = Color(0xFF78350F),
                                 textAlign = TextAlign.Center
@@ -297,7 +315,7 @@ fun VietQrPaymentDialog(
                     }
                 }
 
-                // Action Buttons
+                // Action Buttons - clearly distinguished for KTV vs Customer
                 Button(
                     onClick = {
                         onConfirmPayment(selectedMethod)
@@ -312,7 +330,11 @@ fun VietQrPaymentDialog(
                     Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (selectedMethod == "VIETQR") "TÔI ĐÃ CHUYỂN KHOẢN THÀNH CÔNG" else "XÁC NHẬN TRẢ TIỀN MẶT CHO THỢ",
+                        text = if (isTechnicianView) {
+                            if (selectedMethod == "VIETQR") "XÁC NHẬN KHÁCH ĐÃ CHUYỂN KHOẢN QR" else "XÁC NHẬN ĐÃ THU TIỀN MẶT TỪ KHÁCH"
+                        } else {
+                            if (selectedMethod == "VIETQR") "TÔI ĐÃ CHUYỂN KHOẢN QR THÀNH CÔNG" else "TÔI ĐÃ GỬI TIỀN MẶT CHO THỢ"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.5.sp
                     )

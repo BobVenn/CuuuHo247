@@ -74,6 +74,9 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    private var cachedCustomerProfile: UserProfile? = null
+    private var cachedTechnicianProfile: UserProfile? = null
+
     fun setLocalUserProfile(profile: UserProfile) {
         _userProfile.value = profile
         _isLocalSessionActive.value = true
@@ -82,10 +85,49 @@ class AuthViewModel : ViewModel() {
     fun switchUserRole(newRole: String) {
         val current = _userProfile.value ?: UserProfile(displayName = "Người dùng")
         val isStaff = newRole == AppConfig.UserRole.STAFF
-        val updated = current.copy(
-            role = newRole,
-            partnerStatus = if (isStaff) AppConfig.PartnerApplicationStatus.APPROVED else current.partnerStatus
-        )
+
+        val updated = if (isStaff) {
+            // Lưu lại profile khách hàng hiện tại
+            if (current.role != AppConfig.UserRole.STAFF) {
+                cachedCustomerProfile = current
+            }
+            // Chuyển sang tài khoản Kỹ Thuật Viên với UID và danh tính thợ riêng biệt
+            val techUid = if (current.uid.startsWith("ktv_")) current.uid else "ktv_${current.uid.ifBlank { "toan_247" }}"
+            cachedTechnicianProfile ?: UserProfile(
+                uid = techUid,
+                email = if (current.email.isNotBlank()) "ktv." + current.email.removePrefix("ktv.") else "ktv.toan@cuuho247.vn",
+                displayName = if (current.displayName.startsWith("KTV", ignoreCase = true)) {
+                    current.displayName
+                } else {
+                    "KTV ${current.displayName.ifBlank { "Nguyễn Văn Toàn" }}"
+                },
+                phone = if (current.phone.isNotBlank() && current.phone != "0987654321") current.phone else "0901234567",
+                role = AppConfig.UserRole.STAFF,
+                partnerStatus = AppConfig.PartnerApplicationStatus.APPROVED,
+                vehicleType = "Xe cứu hộ sàn trượt",
+                vehicleName = "Hyundai Mighty 75S",
+                licensePlate = "29C-888.12"
+            ).also { cachedTechnicianProfile = it }
+        } else {
+            // Lưu lại profile KTV
+            if (current.role == AppConfig.UserRole.STAFF) {
+                cachedTechnicianProfile = current
+            }
+            // Khôi phục lại tài khoản Khách hàng
+            val custUid = current.uid.removePrefix("ktv_").ifBlank { "usr_cust_${System.currentTimeMillis()}" }
+            cachedCustomerProfile ?: UserProfile(
+                uid = custUid,
+                email = current.email.removePrefix("ktv."),
+                displayName = current.displayName.removePrefix("KTV ").trim().ifBlank { "Khách hàng" },
+                phone = if (current.phone == "0901234567") "0987654321" else current.phone,
+                role = AppConfig.UserRole.USER,
+                partnerStatus = AppConfig.PartnerApplicationStatus.NONE,
+                vehicleType = "Ô tô 4-7 chỗ",
+                vehicleName = "Toyota Vios",
+                licensePlate = "30K - 888.99"
+            ).also { cachedCustomerProfile = it }
+        }
+
         _userProfile.value = updated
         _isLocalSessionActive.value = true
         _successMessage.value = "Đã chuyển sang chế độ ${if (isStaff) "Kỹ Thuật Viên Cứu Hộ" else "Khách Hàng"}"
@@ -120,7 +162,7 @@ class AuthViewModel : ViewModel() {
             msg.contains("weak-password", ignoreCase = true) ->
                 "Mật khẩu quá ngắn, vui lòng nhập tối thiểu 6 ký tự."
             msg.contains("network", ignoreCase = true) ->
-                "Lỗi kết nối mạng đến Firebase. Vui lòng kiểm tra kết nối WiFi/4G."
+                "Lỗi kết nối mạng đến hệ thống máy chủ cứu hộ. Vui lòng kiểm tra kết nối WiFi/4G."
             else -> e?.localizedMessage ?: "Đăng nhập thất bại"
         }
     }

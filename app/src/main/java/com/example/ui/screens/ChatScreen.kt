@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.config.AppConfig
 import com.example.data.model.ChatMessage
 import com.example.data.model.RescueRequest
 import com.example.data.model.UserProfile
@@ -45,6 +47,14 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale("vi", "VN")) }
 
+    val isCustomer = currentUserProfile?.role == AppConfig.UserRole.USER || currentUserProfile?.uid == request.userId
+    val otherPartyName = if (isCustomer) {
+        request.staffName?.ifBlank { null } ?: "Kỹ thuật viên cứu hộ"
+    } else {
+        request.userName.ifBlank { "Khách hàng" }
+    }
+    val otherPartyRole = if (isCustomer) "Kỹ Thuật Viên 24/7" else "Khách Hàng Cần Cứu Hộ"
+
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(chatMessages.size) {
         if (chatMessages.isNotEmpty()) {
@@ -58,16 +68,12 @@ fun ChatScreen(
                 title = {
                     Column {
                         Text(
-                            text = if (currentUserProfile?.uid == request.userId) {
-                                request.staffName ?: "Kỹ thuật viên cứu hộ"
-                            } else {
-                                request.userName.ifBlank { "Khách hàng" }
-                            },
+                            text = otherPartyName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Đơn #${request.id.takeLast(6)} • ${request.issueType}",
+                            text = "$otherPartyRole • Đơn #${request.id.takeLast(6)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -96,15 +102,25 @@ fun ChatScreen(
                     .imePadding()
             ) {
                 Column {
-                    // Quick Canned Emergency Chips
-                    val quickMessages = listOf(
-                        "Tôi đang đứng ở lề đường bên phải",
-                        "Khoảng bao lâu nữa anh tới?",
-                        "Xe của tôi không đề nổ được",
-                        "Anh mang giúp dây câu bình nhé",
-                        "Tôi đã bật đèn hazard cảnh báo",
-                        "Tôi đã gửi vị trí chính xác trên bản đồ"
-                    )
+                    // Quick Canned Emergency Chips - tailored for Customer vs Technician
+                    val quickMessages = if (isCustomer) {
+                        listOf(
+                            "Tôi đang đứng ở lề đường bên phải",
+                            "Khoảng bao lâu nữa anh tới nơi?",
+                            "Xe của tôi không đề nổ được",
+                            "Anh mang giúp dây câu bình nhé",
+                            "Tôi đã bật đèn cảnh báo hazard",
+                            "Vị trí trên bản đồ là chính xác"
+                        )
+                    } else {
+                        listOf(
+                            "Chào bạn, tôi đã nhận đơn và đang xuất phát!",
+                            "Tôi đang di chuyển, khoảng 5 - 10 phút nữa tới nơi",
+                            "Bạn đứng vị trí an toàn, giữ liên lạc nhé",
+                            "Tôi đã đến hiện trường và đang kiểm tra xe",
+                            "Sự cố đã được khắc phục xong rồi bạn nhé"
+                        )
+                    }
 
                     LazyRow(
                         modifier = Modifier
@@ -131,118 +147,154 @@ fun ChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        placeholder = { Text("Nhập tin nhắn trao đổi...") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("input_chat_message"),
-                        shape = RoundedCornerShape(24.dp),
-                        maxLines = 3
-                    )
+                        OutlinedTextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            placeholder = { Text(if (isCustomer) "Nhắn tin cho Kỹ thuật viên..." else "Nhắn tin cho Khách hàng...") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("input_chat_message"),
+                            shape = RoundedCornerShape(24.dp),
+                            maxLines = 3
+                        )
 
-                    FilledIconButton(
-                        onClick = {
-                            if (inputText.isNotBlank()) {
-                                onSendMessage(inputText)
-                                inputText = ""
-                            }
-                        },
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = RescuePrimary),
-                        modifier = Modifier.testTag("btn_send_chat")
-                    ) {
-                        Icon(Icons.Default.Send, contentDescription = "Gửi", tint = Color.White)
+                        FilledIconButton(
+                            onClick = {
+                                if (inputText.isNotBlank()) {
+                                    onSendMessage(inputText)
+                                    inputText = ""
+                                }
+                            },
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = RescuePrimary),
+                            modifier = Modifier.testTag("btn_send_chat")
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Gửi", tint = Color.White)
+                        }
                     }
-                }
                 }
             }
         }
     ) { paddingValues ->
-        if (chatMessages.isEmpty()) {
-            // Real Empty State (No Mock Messages)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Pending notice if customer is waiting for technician acceptance
+            if (isCustomer && request.staffName.isNullOrBlank()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        Icons.Default.ChatBubbleOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "Chưa có tin nhắn nào",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Hãy gửi tin nhắn để trao đổi chi tiết tình trạng xe hoặc vị trí chính xác với đội cứu hộ.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Đang điều phối kỹ thuật viên tiếp nhận đơn. Tin nhắn bạn gửi sẽ hiển thị trực tiếp cho KTV ngay khi nhận đơn.",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
                 }
             }
-        } else {
-            // Real Chat Message List
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(chatMessages) { msg ->
-                    val isMe = msg.senderId == currentUserProfile?.uid
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+            if (chatMessages.isEmpty()) {
+                // Empty State
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = if (isMe) 16.dp else 4.dp,
-                                bottomEnd = if (isMe) 4.dp else 16.dp
-                            ),
-                            color = if (isMe) RescuePrimary else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.widthIn(max = 280.dp)
+                        Icon(
+                            Icons.Default.ChatBubbleOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            text = "Chưa có tin nhắn nào",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isCustomer) {
+                                "Hãy gửi tin nhắn để trao đổi chi tiết tình trạng xe hoặc vị trí chính xác với đội cứu hộ."
+                            } else {
+                                "Gửi tin nhắn xác nhận lộ trình hoặc hướng dẫn an toàn cho khách hàng tại hiện trường."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                // Chat Message List
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(chatMessages) { msg ->
+                        val isMe = (msg.senderId == currentUserProfile?.uid) ||
+                                (msg.senderRole == currentUserProfile?.role && msg.senderName == currentUserProfile?.displayName)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
                         ) {
-                            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                if (!isMe) {
+                            Surface(
+                                shape = RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                    bottomStart = if (isMe) 16.dp else 4.dp,
+                                    bottomEnd = if (isMe) 4.dp else 16.dp
+                                ),
+                                color = if (isMe) RescuePrimary else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                    if (!isMe) {
+                                        val roleLabel = if (msg.senderRole == AppConfig.UserRole.STAFF) "Kỹ thuật viên" else "Khách hàng"
+                                        Text(
+                                            text = "${msg.senderName} ($roleLabel)",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = RescuePrimary
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                    }
+
                                     Text(
-                                        text = "${msg.senderName} (${msg.senderRole})",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = RescuePrimary
+                                        text = msg.message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
                                     )
+
                                     Spacer(modifier = Modifier.height(2.dp))
+
+                                    Text(
+                                        text = timeFormat.format(Date(msg.timestamp)),
+                                        fontSize = 10.sp,
+                                        color = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.align(Alignment.End)
+                                    )
                                 }
-
-                                Text(
-                                    text = msg.message,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
-                                )
-
-                                Spacer(modifier = Modifier.height(2.dp))
-
-                                Text(
-                                    text = timeFormat.format(Date(msg.timestamp)),
-                                    fontSize = 10.sp,
-                                    color = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.align(Alignment.End)
-                                )
                             }
                         }
                     }

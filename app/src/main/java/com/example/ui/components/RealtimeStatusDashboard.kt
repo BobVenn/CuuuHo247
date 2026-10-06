@@ -164,7 +164,7 @@ fun RealtimeStatusDashboard(
                                 .background(SafeGreen, CircleShape)
                         )
                         Text(
-                            text = "FIREBASE LIVE OBSERVER",
+                            text = "THEO DÕI TRỰC TIẾP 24/7",
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Black,
                             color = SafeGreen

@@ -46,11 +46,10 @@ fun InAppCallDialog(
     val context = LocalContext.current
 
     // Call states: RINGING -> CONNECTED -> ENDED
-    var callState by remember { mutableStateOf("RINGING") }
+    var callState by remember { mutableStateOf(if (callInfo.isIncoming) "INCOMING" else "RINGING") }
     var callDurationSeconds by remember { mutableIntStateOf(0) }
     var isMuted by remember { mutableStateOf(false) }
     var isSpeakerOn by remember { mutableStateOf(true) }
-    var liveTranscript by remember { mutableStateOf("Đang kết nối tín hiệu qua ứng dụng...") }
 
     // Pulsing circle animation during ringing
     val infiniteTransition = rememberInfiniteTransition(label = "call_anim")
@@ -64,25 +63,12 @@ fun InAppCallDialog(
         label = "pulse_scale"
     )
 
-    // Call duration timer & auto-connect logic
-    LaunchedEffect(Unit) {
-        delay(2200) // Ring for 2.2 seconds then auto-answer
-        callState = "CONNECTED"
-        liveTranscript = if (callInfo.recipientRole.contains("Kỹ thuật", ignoreCase = true)) {
-            "KTV: \"Alo tôi nghe đây bạn ơi! Tôi là thợ cứu hộ, bạn đang đỗ xe ở vị trí nào vậy?\""
-        } else {
-            "Khách: \"Dạ alo anh ơi! Xe em chết máy đang đỗ lề đường, anh sắp qua tới nơi chưa ạ?\""
-        }
-
-        while (callState == "CONNECTED") {
-            delay(1000)
-            callDurationSeconds++
-            if (callDurationSeconds == 5) {
-                liveTranscript = if (callInfo.recipientRole.contains("Kỹ thuật", ignoreCase = true)) {
-                    "KTV: \"Tôi đã xem được tọa độ GPS trên bản đồ của bạn rồi, tôi đang chạy xe đến nhé!\""
-                } else {
-                    "Khách: \"Em đã bật đèn khẩn cấp hazard rồi, em đứng đợi anh ở đây nha!\""
-                }
+    // Call duration timer - only counts when actually CONNECTED
+    LaunchedEffect(callState) {
+        if (callState == "CONNECTED") {
+            while (true) {
+                delay(1000)
+                callDurationSeconds++
             }
         }
     }
@@ -129,13 +115,13 @@ fun InAppCallDialog(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (callState == "CONNECTED") SafeGreen else RescuePrimary,
+                                color = if (callState == "CONNECTED") SafeGreen else Color(0xFFF59E0B),
                                 modifier = Modifier.size(8.dp)
                             ) {}
                             Text(
-                                text = "Cuộc Gọi Trực Tiếp Qua App (VoIP Miễn Phí)",
+                                text = "Cuộc Gọi Cứu Hộ Trực Tiếp 24/7",
                                 color = Color.White,
-                                fontSize = 11.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -173,15 +159,17 @@ fun InAppCallDialog(
 
                     // Call status or duration
                     Text(
-                        text = if (callState == "CONNECTED") {
-                            val minutes = callDurationSeconds / 60
-                            val seconds = callDurationSeconds % 60
-                            String.format(java.util.Locale.US, "%02d:%02d • Đang đàm thoại rõ", minutes, seconds)
-                        } else {
-                            "Đang đổ chuông..."
+                        text = when (callState) {
+                            "CONNECTED" -> {
+                                val minutes = callDurationSeconds / 60
+                                val seconds = callDurationSeconds % 60
+                                String.format(java.util.Locale.US, "%02d:%02d • Đang đàm thoại trực tiếp", minutes, seconds)
+                            }
+                            "INCOMING" -> "Cuộc gọi đến từ ${callInfo.recipientRole}..."
+                            else -> "Đang đổ chuông... Đợi người nghe nhấc máy"
                         },
                         color = if (callState == "CONNECTED") SafeGreen else Color(0xFFCBD5E1),
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -191,7 +179,7 @@ fun InAppCallDialog(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.size(200.dp)
                 ) {
-                    if (callState == "RINGING" || callState == "CONNECTED") {
+                    if (callState == "RINGING" || callState == "INCOMING" || callState == "CONNECTED") {
                         Box(
                             modifier = Modifier
                                 .size(170.dp)
@@ -199,7 +187,7 @@ fun InAppCallDialog(
                                 .clip(CircleShape)
                                 .background(
                                     if (callState == "CONNECTED") SafeGreen.copy(alpha = 0.15f)
-                                    else RescuePrimary.copy(alpha = 0.15f)
+                                    else Color(0xFFF59E0B).copy(alpha = 0.15f)
                                 )
                         )
                     }
@@ -221,29 +209,59 @@ fun InAppCallDialog(
                     }
                 }
 
-                // Middle: Live voice transcript preview
+                // Middle: Call status banner
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color.White.copy(alpha = 0.08f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.Default.RecordVoiceOver,
-                            contentDescription = null,
-                            tint = if (callState == "CONNECTED") SafeGreen else RescuePrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text(
-                            text = liveTranscript,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
-                        )
+                        if (callState != "CONNECTED") {
+                            Text(
+                                text = "🔔 Đang chờ ${callInfo.recipientName} bắt máy để bắt đầu đàm thoại...",
+                                color = Color.White,
+                                fontSize = 12.5.sp,
+                                textAlign = TextAlign.Center
+                            )
+
+                            // Action button to answer/connect the call
+                            Button(
+                                onClick = { callState = "CONNECTED" },
+                                colors = ButtonDefaults.buttonColors(containerColor = SafeGreen),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.height(40.dp)
+                            ) {
+                                Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (callInfo.isIncoming) "Nhấc Máy Trả Lời" else "Bắt Máy / Kết Nối Đàm Thoại",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.GraphicEq,
+                                    contentDescription = null,
+                                    tint = SafeGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Đang kết nối âm thanh hai chiều trực tiếp qua mạng",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -253,7 +271,7 @@ fun InAppCallDialog(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Secondary Controls: Mute & Speaker
+                    // Secondary Controls: Mute & Speaker & Direct Phone Call
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -349,7 +367,7 @@ fun InAppCallDialog(
                     }
 
                     Text(
-                        text = "Bấm nút đỏ để kết thúc cuộc gọi",
+                        text = "Bấm nút đỏ để gác máy kết thúc cuộc gọi",
                         color = Color(0xFF64748B),
                         fontSize = 11.sp
                     )

@@ -184,7 +184,7 @@ fun LocalizedStatusBanner(
                                         .background(accentColor, CircleShape)
                                 )
                                 Text(
-                                    text = "THÔNG BÁO REALTIME FIREBASE",
+                                    text = "CẬP NHẬT TRỰC TIẾP",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
                                     color = accentColor

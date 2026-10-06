@@ -37,6 +37,7 @@ fun ProfileScreen(
     onAddVehicle: ((name: String, vType: String, plate: String, inspection: String, insurance: String) -> Unit)? = null,
     onRemoveVehicle: ((String) -> Unit)? = null,
     onUpdateProfile: (name: String, phone: String, vehicleType: String, vehicleName: String, licensePlate: String, role: String?) -> Unit,
+    onSwitchRole: ((String) -> Unit)? = null,
     onNavigateToHistory: () -> Unit,
     onNavigateToReports: () -> Unit,
     onSignOut: () -> Unit
@@ -231,6 +232,53 @@ fun ProfileScreen(
                         Icon(Icons.Default.Numbers, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(18.dp))
                         Text("Biển số xe: ", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Text(userProfile?.licensePlate?.ifBlank { "Chưa cập nhật" } ?: "Chưa cập nhật", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // CHUYỂN ĐỔI CHẾ ĐỘ KỸ THUẬT VIÊN CỨU HỘ
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_switch_to_ktv_mode"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, EmergencyGold.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = EmergencyGold.copy(alpha = 0.15f),
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Build, contentDescription = null, tint = EmergencyGold, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Column {
+                            Text("Chế Độ Kỹ Thuật Viên Cứu Hộ", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text("Dành cho thợ sửa chữa, xe kéo nhận và xử lý đơn sự cố", fontSize = 11.sp, color = OnSurfaceVariantLight)
+                        }
+                    }
+
+                    Button(
+                        onClick = { onSwitchRole?.invoke(AppConfig.UserRole.STAFF) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmergencyGold),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("Vào KTV", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                     }
                 }
             }

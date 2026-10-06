@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -221,26 +222,35 @@ fun MainAppHost(
             }
 
             is AppScreen.Chat -> {
+                val isStaffUser = userProfile?.role == AppConfig.UserRole.STAFF
+                val navigateBackFromChat = {
+                    if (isStaffUser) {
+                        currentScreen = AppScreen.MainTabs
+                    } else {
+                        currentScreen = AppScreen.RequestDetail(screen.request)
+                    }
+                }
                 BackHandler {
-                    currentScreen = AppScreen.RequestDetail(screen.request)
+                    navigateBackFromChat()
                 }
                 ChatScreen(
                     request = screen.request,
                     currentUserProfile = userProfile,
                     chatMessages = chatMessages,
-                    onBack = { currentScreen = AppScreen.RequestDetail(screen.request) },
+                    onBack = { navigateBackFromChat() },
                     onSendMessage = { text ->
-                        userProfile?.let {
-                            val receiverId = if (it.uid == screen.request.userId) {
-                                screen.request.staffId ?: ""
+                        userProfile?.let { prof ->
+                            val isCust = prof.role == AppConfig.UserRole.USER || prof.uid == screen.request.userId
+                            val receiverId = if (isCust) {
+                                screen.request.staffId ?: "ktv_hotline"
                             } else {
                                 screen.request.userId
                             }
-                            rescueViewModel.sendChatMessage(screen.request.id, text, it, receiverId)
+                            rescueViewModel.sendChatMessage(screen.request.id, text, prof, receiverId)
                         }
                     },
                     onCallUser = {
-                        val isCust = userProfile?.uid == screen.request.userId
+                        val isCust = userProfile?.role == AppConfig.UserRole.USER || userProfile?.uid == screen.request.userId
                         val targetName = if (isCust) screen.request.staffName ?: "Kỹ thuật viên cứu hộ" else screen.request.userName.ifBlank { "Khách hàng" }
                         val targetRole = if (isCust) "Kỹ thuật viên cứu hộ" else "Khách hàng gặp sự cố"
                         val targetPhone = if (isCust) screen.request.staffPhone ?: "" else screen.request.userPhone
@@ -276,125 +286,188 @@ fun MainAppHost(
             }
 
         AppScreen.MainTabs -> {
-            if (currentTab != MainNavTab.HOME) {
-                BackHandler {
-                    currentTab = MainNavTab.HOME
+            if (userProfile?.role == AppConfig.UserRole.STAFF) {
+                TechnicianScreen(
+                    userProfile = userProfile,
+                    allRequests = allRequests,
+                    onAcceptRequest = { id ->
+                        userProfile?.let { rescueViewModel.acceptRequestByStaff(id, it) }
+                    },
+                    onUpdateStatus = { id, status, cost ->
+                        rescueViewModel.updateRequestStatus(id, status, cost)
+                    },
+                    onOpenChat = { req ->
+                        rescueViewModel.observeChat(req.id)
+                        currentScreen = AppScreen.Chat(req)
+                    },
+                    onCallCustomer = { phone ->
+                        rescueViewModel.triggerEmergencySosDialer(context, phone)
+                    },
+                    onNavigateToLocation = { lat, lng, label ->
+                        rescueViewModel.launchNavigation(context, lat, lng, label)
+                    },
+                    onOpenDetail = { req ->
+                        currentScreen = AppScreen.RequestDetail(req)
+                    },
+                    onSwitchToCustomer = {
+                        authViewModel.switchUserRole(AppConfig.UserRole.USER)
+                    },
+                    onSignOut = {
+                        authViewModel.signOut()
+                    },
+                    onUpdatePaymentStatus = { id, paymentStatus ->
+                        rescueViewModel.updatePaymentStatus(id, paymentStatus)
+                    }
+                )
+            } else {
+                if (currentTab != MainNavTab.HOME) {
+                    BackHandler {
+                        currentTab = MainNavTab.HOME
+                    }
                 }
-            }
 
-            val hotlinePulseTransition = rememberInfiniteTransition(label = "hotline_pulse")
-            val hotlineScale by hotlinePulseTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.08f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(800, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "hotline_scale"
-            )
+                val hotlinePulseTransition = rememberInfiniteTransition(label = "hotline_pulse")
+                val hotlineScale by hotlinePulseTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.08f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "hotline_scale"
+                )
 
-            Scaffold(
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-                topBar = {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("customer_app_header"),
-                        color = Color(0xFF0A2540),
-                        shadowElevation = 6.dp
-                    ) {
-                        Row(
+                Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
+                    topBar = {
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .testTag("customer_app_header"),
+                            color = Color(0xFF0A2540),
+                            shadowElevation = 6.dp
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = RescuePrimary,
-                                    modifier = Modifier.size(38.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Filled.DirectionsCar,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                }
-                                Column {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = RescuePrimary,
+                                        modifier = Modifier.size(38.dp)
                                     ) {
-                                        Text(
-                                            text = "CỨU HỘ GIAO THÔNG 24/7",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 13.sp
-                                        )
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = SafeGreen
-                                        ) {
-                                            Text(
-                                                text = "24/7",
-                                                color = Color.White,
-                                                fontSize = 8.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Filled.DirectionsCar,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
                                             )
                                         }
                                     }
-                                    Text(
-                                        text = "Tổng đài hỗ trợ: ${AppConfig.RESCUE_HOTLINE_DISPLAY}",
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "CỨU HỘ GIAO THÔNG 24/7",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 13.sp
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = SafeGreen
+                                            ) {
+                                                Text(
+                                                    text = "24/7",
+                                                    color = Color.White,
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Tổng đài hỗ trợ: ${AppConfig.RESCUE_HOTLINE_DISPLAY}",
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    // Mode Switcher to Technician
+                                    OutlinedButton(
+                                        onClick = {
+                                            authViewModel.switchUserRole(AppConfig.UserRole.STAFF)
+                                        },
+                                        shape = RoundedCornerShape(18.dp),
+                                        border = BorderStroke(1.dp, EmergencyGold),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmergencyGold),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                                        modifier = Modifier.testTag("btn_top_switch_to_ktv")
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Build,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "KTV Nhận Đơn",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    // Quick-Dial Emergency Hotline (0898 212 031) with Pulse Animation
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.DEFAULT_RESCUE_HOTLINE}")).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(intent)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
+                                        shape = RoundedCornerShape(18.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                        modifier = Modifier
+                                            .scale(hotlineScale)
+                                            .testTag("btn_top_quick_dial_hotline")
+                                    ) {
+                                        Icon(
+                                            Icons.Default.PhoneInTalk,
+                                            contentDescription = "Gọi Hotline ${AppConfig.RESCUE_HOTLINE_DISPLAY}",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "GỌI SOS",
+                                            color = Color.White,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
                                 }
                             }
-
-                            // Quick-Dial Emergency Hotline (0898 212 031) with Pulse Animation
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.DEFAULT_RESCUE_HOTLINE}")).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(intent)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
-                                shape = RoundedCornerShape(18.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                                modifier = Modifier
-                                    .scale(hotlineScale)
-                                    .testTag("btn_top_quick_dial_hotline")
-                            ) {
-                                Icon(
-                                    Icons.Default.PhoneInTalk,
-                                    contentDescription = "Gọi Hotline ${AppConfig.RESCUE_HOTLINE_DISPLAY}",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "GỌI SOS",
-                                    color = Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
                         }
-                    }
-                },
+                    },
                 bottomBar = {
                     NavigationBar(
                         modifier = Modifier
@@ -609,6 +682,9 @@ fun MainAppHost(
                                 onUpdateProfile = { name, phone, vType, vName, plate, role ->
                                     authViewModel.updateProfile(name, phone, vType, vName, plate, role)
                                 },
+                                onSwitchRole = { role ->
+                                    authViewModel.switchUserRole(role)
+                                },
                                 onNavigateToHistory = { currentTab = MainNavTab.HISTORY },
                                 onNavigateToReports = { currentScreen = AppScreen.Reports },
                                 onSignOut = {
@@ -619,6 +695,7 @@ fun MainAppHost(
                     }
                 }
             }
+        }
         }
     }
 
