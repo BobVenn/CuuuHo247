@@ -49,7 +49,7 @@ fun TechnicianScreen(
     userProfile: UserProfile?,
     allRequests: List<RescueRequest>,
     onAcceptRequest: (String) -> Unit,
-    onUpdateStatus: (String, String, Long?) -> Unit,
+    onUpdateStatus: (String, String, Long?, String?) -> Unit,
     onOpenChat: (RescueRequest) -> Unit,
     onCallCustomer: (String) -> Unit,
     onNavigateToLocation: (Double, Double, String) -> Unit,
@@ -63,6 +63,7 @@ fun TechnicianScreen(
     var showWalletDialog by remember { mutableStateOf(false) }
     var paymentDialogRequest by remember { mutableStateOf<RescueRequest?>(null) }
     var finishCostInput by remember { mutableStateOf("250000") }
+    var finishFeedbackInput by remember { mutableStateOf("Đã kiểm tra và xử lý sự cố phương tiện an toàn tại hiện trường. Hệ thống vận hành ổn định.") }
     var showFinishConfirmDialog by remember { mutableStateOf<RescueRequest?>(null) }
 
     val dateFormat = remember { SimpleDateFormat("HH:mm - dd/MM", Locale("vi", "VN")) }
@@ -323,7 +324,7 @@ fun TechnicianScreen(
                     ActiveJobSection(
                         activeRequests = myActiveRequests,
                         dateFormat = dateFormat,
-                        onUpdateStatus = onUpdateStatus,
+                        onUpdateStatus = { id, status, cost -> onUpdateStatus(id, status, cost, null) },
                         onCall = onCallCustomer,
                         onChat = onOpenChat,
                         onNavigate = onNavigateToLocation,
@@ -363,8 +364,8 @@ fun TechnicianScreen(
             title = { Text("Hoàn Thành Cứu Hộ", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Đơn #${targetReq.id.takeLast(6)}: ${targetReq.issueType}")
-                    Text("Nhập tổng cước phí dịch vụ để xuất mã QR thanh toán hoặc thu tiền mặt:")
+                    Text("Đơn #${targetReq.id.takeLast(6)}: ${targetReq.issueType}", fontWeight = FontWeight.Bold)
+                    Text("Nhập cước phí và nhận xét/khuyến nghị kỹ thuật cho khách hàng:")
                     OutlinedTextField(
                         value = finishCostInput,
                         onValueChange = { finishCostInput = it.filter { char -> char.isDigit() } },
@@ -372,15 +373,23 @@ fun TechnicianScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    OutlinedTextField(
+                        value = finishFeedbackInput,
+                        onValueChange = { finishFeedbackInput = it },
+                        label = { Text("Nhận xét & Hướng dẫn kỹ thuật cho khách") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                        supportingText = { Text("Lưu vào lịch sử cứu hộ trên Firebase để khách hàng theo dõi") }
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         val cost = finishCostInput.toLongOrNull() ?: 250000L
-                        onUpdateStatus(targetReq.id, AppConfig.RequestStatus.COMPLETED, cost)
+                        onUpdateStatus(targetReq.id, AppConfig.RequestStatus.COMPLETED, cost, finishFeedbackInput.ifBlank { "Đã hoàn thành cứu hộ và bàn giao xe an toàn." })
                         showFinishConfirmDialog = null
-                        paymentDialogRequest = targetReq.copy(cost = cost)
+                        paymentDialogRequest = targetReq.copy(cost = cost, technicianFeedback = finishFeedbackInput)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)
                 ) {

@@ -390,7 +390,8 @@ class FirebaseManager private constructor() {
         staffId: String? = null,
         staffName: String? = null,
         staffPhone: String? = null,
-        cost: Long? = null
+        cost: Long? = null,
+        technicianFeedback: String? = null
     ): Result<Unit> {
         return try {
             val updates = mutableMapOf<String, Any?>("status" to status)
@@ -398,12 +399,25 @@ class FirebaseManager private constructor() {
             if (staffName != null) updates["staffName"] = staffName
             if (staffPhone != null) updates["staffPhone"] = staffPhone
             if (cost != null) updates["cost"] = cost
+            if (technicianFeedback != null) updates["technicianFeedback"] = technicianFeedback
 
             requestsRef.child(requestId).updateChildren(updates).await()
             Log.i(TAG, "updateRequestStatus successful for $requestId to $status")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "updateRequestStatus failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateTechnicianFeedback(requestId: String, feedback: String): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any?>("technicianFeedback" to feedback)
+            requestsRef.child(requestId).updateChildren(updates).await()
+            Log.i(TAG, "updateTechnicianFeedback successful for $requestId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "updateTechnicianFeedback failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -492,6 +506,8 @@ class FirebaseManager private constructor() {
         val ratingComment = snapshot.child("ratingComment").getValue(String::class.java)
         val emerContact = snapshot.child("emergencyContact").getValue(String::class.java)
         val emerPhone = snapshot.child("emergencyContactPhone").getValue(String::class.java)
+        val techFeedback = snapshot.child("technicianFeedback").getValue(String::class.java)
+            ?: snapshot.child("staffNote").getValue(String::class.java)
 
         return RescueRequest(
             id = id,
@@ -516,7 +532,8 @@ class FirebaseManager private constructor() {
             emergencyContactPhone = emerPhone,
             timestamp = time,
             rating = rating,
-            ratingComment = ratingComment
+            ratingComment = ratingComment,
+            technicianFeedback = techFeedback
         )
     }
 

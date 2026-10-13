@@ -189,8 +189,8 @@ fun MainAppHost(
                     onAcceptRequestByStaff = { id ->
                         userProfile?.let { rescueViewModel.acceptRequestByStaff(id, it) }
                     },
-                    onUpdateStatusByStaff = { id, status, cost ->
-                        rescueViewModel.updateRequestStatus(id, status, cost)
+                    onUpdateStatusByStaff = { id, status, cost, feedback ->
+                        rescueViewModel.updateRequestStatus(id, status, cost, feedback)
                     },
                     onSubmitRating = { rating, comment ->
                         userProfile?.let {
@@ -310,8 +310,8 @@ fun MainAppHost(
                     onAcceptRequest = { id ->
                         userProfile?.let { rescueViewModel.acceptRequestByStaff(id, it) }
                     },
-                    onUpdateStatus = { id, status, cost ->
-                        rescueViewModel.updateRequestStatus(id, status, cost)
+                    onUpdateStatus = { id, status, cost, feedback ->
+                        rescueViewModel.updateRequestStatus(id, status, cost, feedback)
                     },
                     onOpenChat = { req ->
                         rescueViewModel.observeChat(req.id)
@@ -719,6 +719,15 @@ fun MainAppHost(
                                 requests = userRequests,
                                 onRequestClick = { req ->
                                     currentScreen = AppScreen.RequestDetail(req)
+                                },
+                                onSeedSampleRequest = {
+                                    val profile = userProfile ?: com.example.data.model.UserProfile(
+                                        displayName = currentUser?.displayName ?: "Tài xế Cứu Hộ",
+                                        phone = "0987654321",
+                                        vehicleType = "Ô tô 5 chỗ (Toyota Camry)",
+                                        licensePlate = "30A-868.86"
+                                    )
+                                    rescueViewModel.seedSampleCompletedEmergencyRequest(profile)
                                 }
                             )
                         }

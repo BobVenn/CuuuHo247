@@ -49,7 +49,7 @@ fun RequestDetailScreen(
     onOpenChat: (String) -> Unit,
     onCancelRequest: (String) -> Unit,
     onAcceptRequestByStaff: (String) -> Unit,
-    onUpdateStatusByStaff: (String, String, Long?) -> Unit,
+    onUpdateStatusByStaff: (String, String, Long?, String?) -> Unit,
     onSubmitRating: (rating: Int, comment: String) -> Unit,
     onSimulateRescueFlow: ((String) -> Unit)? = null,
     onInAppCall: ((name: String, role: String, phone: String, issue: String) -> Unit)? = null,
@@ -66,6 +66,7 @@ fun RequestDetailScreen(
     var showCancelConfirmDialog by remember { mutableStateOf(false) }
     var showUpdateCostDialog by remember { mutableStateOf(false) }
     var costInput by remember { mutableStateOf(request.cost?.toString() ?: "250000") }
+    var feedbackInput by remember { mutableStateOf(request.technicianFeedback ?: "Đã xử lý sự cố thành công và bàn giao xe an toàn.") }
 
     val dateFormat = remember { SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale("vi", "VN")) }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("vi", "VN")) }
@@ -761,6 +762,87 @@ fun RequestDetailScreen(
                 }
             }
 
+            // NHẬN XÉT, CHẨN ĐOÁN & KHUYẾN NGHỊ KỸ THUẬT VIÊN (Firebase Stored Feedback)
+            if (!request.technicianFeedback.isNullOrBlank()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("technician_feedback_card"),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                    border = BorderStroke(1.5.dp, Color(0xFF86EFAC)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    contentDescription = null,
+                                    tint = SafeGreen,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = "CHẨN ĐOÁN & KHUYẾN NGHỊ KỸ THUẬT",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF166534)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = SafeGreen
+                            ) {
+                                Text(
+                                    text = "ĐÃ NGHIỆM THU ✓",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = request.technicianFeedback,
+                            fontSize = 13.5.sp,
+                            lineHeight = 20.sp,
+                            color = Color(0xFF14532D)
+                        )
+
+                        HorizontalDivider(color = Color(0xFFBBF7D0))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "KTV: ${request.staffName ?: "Đội Cứu Hộ 24/7"}",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF166534)
+                            )
+                            Text(
+                                text = "Lưu trữ Firebase Realtime",
+                                fontSize = 10.sp,
+                                color = Color(0xFF15803D)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Rating display if already rated
             if (request.rating != null && request.rating > 0) {
                 Card(
@@ -883,7 +965,7 @@ fun RequestDetailScreen(
                             }
 
                             OutlinedButton(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost) },
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.EN_ROUTE, request.cost, null) },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
@@ -893,7 +975,7 @@ fun RequestDetailScreen(
                             }
 
                             OutlinedButton(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost) },
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.ARRIVED, request.cost, null) },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
@@ -908,7 +990,7 @@ fun RequestDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             OutlinedButton(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost) },
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.IN_PROGRESS, request.cost, null) },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
@@ -918,7 +1000,7 @@ fun RequestDetailScreen(
                             }
 
                             OutlinedButton(
-                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, 250000L) },
+                                onClick = { onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, 250000L, feedbackInput) },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
@@ -983,8 +1065,15 @@ fun RequestDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    OutlinedTextField(
+                        value = feedbackInput,
+                        onValueChange = { feedbackInput = it },
+                        label = { Text("Nhận xét & chẩn đoán KTV (Lưu Firebase)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
                     Text(
-                        text = "💡 Hệ thống sẽ tự động tạo mã VietQR Napas để khách hàng quét trả tiền tức thì qua Banking hoặc trả tiền mặt.",
+                        text = "💡 Hệ thống sẽ tự động lưu chẩn đoán vào hồ sơ Firebase và tạo mã VietQR Napas để khách hàng thanh toán.",
                         fontSize = 11.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -995,7 +1084,7 @@ fun RequestDetailScreen(
                     onClick = {
                         showUpdateCostDialog = false
                         val cost = costInput.toLongOrNull() ?: 250000L
-                        onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, cost)
+                        onUpdateStatusByStaff(request.id, AppConfig.RequestStatus.COMPLETED, cost, feedbackInput.ifBlank { "Đã hoàn thành cứu hộ và bàn giao xe an toàn." })
                         showVietQrDialog = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SafeGreen)

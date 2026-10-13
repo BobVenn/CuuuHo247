@@ -582,7 +582,12 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun updateRequestStatus(requestId: String, newStatus: String, cost: Long? = null) {
+    fun updateRequestStatus(
+        requestId: String,
+        newStatus: String,
+        cost: Long? = null,
+        technicianFeedback: String? = null
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
             val currentList = _allRequests.value
@@ -591,7 +596,8 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
                 val prev = target.status
                 val updated = target.copy(
                     status = newStatus,
-                    cost = cost ?: target.cost
+                    cost = cost ?: target.cost,
+                    technicianFeedback = technicianFeedback ?: target.technicianFeedback
                 )
                 knownRequestStatuses[requestId] = newStatus
                 notifyStatusTransition(updated, prev, newStatus)
@@ -607,10 +613,31 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
                 firebaseManager.updateRequestStatus(
                     requestId = requestId,
                     status = newStatus,
-                    cost = cost
+                    cost = cost,
+                    technicianFeedback = technicianFeedback
                 )
             } catch (e: Exception) {
                 Log.w(TAG, "Firebase sync notice: ${e.message}")
+            }
+        }
+    }
+
+    fun updateTechnicianFeedback(requestId: String, feedback: String) {
+        viewModelScope.launch {
+            val currentList = _allRequests.value
+            val target = currentList.find { it.id == requestId }
+            if (target != null) {
+                val updated = target.copy(technicianFeedback = feedback)
+                _allRequests.value = currentList.map { if (it.id == requestId) updated else it }
+                _userRequests.value = _userRequests.value.map { if (it.id == requestId) updated else it }
+                if (_selectedRequest.value?.id == requestId) _selectedRequest.value = updated
+                if (_activeRequest.value?.id == requestId) _activeRequest.value = updated
+            }
+            try {
+                firebaseManager.updateTechnicianFeedback(requestId, feedback)
+                _statusMessage.value = "Đã cập nhật phản hồi kỹ thuật viên trên Firebase"
+            } catch (e: Exception) {
+                Log.w(TAG, "updateTechnicianFeedback notice: ${e.message}")
             }
         }
     }
@@ -754,11 +781,65 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
             kotlinx.coroutines.delay(4000)
             updateRequestStatus(requestId, AppConfig.RequestStatus.IN_PROGRESS)
 
-            // Bước 5: Hoàn thành & tính chi phí
+            // Bước 5: Hoàn thành & tính chi phí kèm nhận xét kỹ thuật
             kotlinx.coroutines.delay(4000)
-            updateRequestStatus(requestId, AppConfig.RequestStatus.COMPLETED, cost = 250000L)
+            updateRequestStatus(
+                requestId = requestId,
+                newStatus = AppConfig.RequestStatus.COMPLETED,
+                cost = 250000L,
+                technicianFeedback = "Đã kích bình ắc quy 12V 60Ah và kiểm tra sạc máy phát điện thành công. Xe nổ máy ổn định, khuyến nghị kiểm tra thay bình sau 3-6 tháng."
+            )
             sendChatMessage(requestId, "Đã xử lý sự cố thành công! Bạn kiểm tra lại xe và đánh giá giúp tôi nhé.", staffProfile)
             _statusMessage.value = "🎉 Cứu hộ hoàn tất! Đơn hàng đã chuyển sang trạng thái Hoàn thành."
+        }
+    }
+
+    /**
+     * Tạo yêu cầu cứu hộ mẫu đã hoàn thành có đầy đủ ngày giờ, loại dịch vụ, chi phí và nhận xét kỹ thuật viên lưu trên Firebase
+     */
+    fun seedSampleCompletedEmergencyRequest(
+        userProfile: UserProfile,
+        onSuccess: (RescueRequest) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val reqId = "REQ_HIST_${System.currentTimeMillis()}"
+            val sampleRequest = RescueRequest(
+                id = reqId,
+                userId = userProfile.uid.ifBlank { "user_sample" },
+                userName = userProfile.displayName.ifBlank { "Tài xế Cứu Hộ" },
+                userPhone = userProfile.phone.ifBlank { "0987654321" },
+                issueType = "Kích bình ắc quy & Kiểm tra nguồn điện",
+                description = "Xe để qua đêm bật chìa khóa không lên điện, cần kích nổ khẩn cấp tại hầm tòa nhà.",
+                address = "Tầng Hầm B2, Tòa Keangnam Landmark 72, Mễ Trì, Nam Từ Liêm, Hà Nội",
+                latitude = 21.0168,
+                longitude = 105.7838,
+                vehicleType = userProfile.vehicleType.ifBlank { "Ô tô 5 chỗ (Toyota Camry)" },
+                licensePlate = userProfile.licensePlate.ifBlank { "30A-868.86" },
+                status = AppConfig.RequestStatus.COMPLETED,
+                staffId = "ktv_toan_01",
+                staffName = "Nguyễn Văn Toàn",
+                staffPhone = "0988112233",
+                cost = 250000L,
+                paymentStatus = "PAID_VIETQR",
+                timestamp = System.currentTimeMillis() - 86400000L * 2, // 2 ngày trước
+                rating = 5,
+                ratingComment = "KTV đến sau 15 phút, kích bình chuyên nghiệp và kiểm tra luôn máy phát sạc rất an tâm!",
+                technicianFeedback = "Đã dùng bộ booster kích nổ bình ắc quy 12V 60Ah khởi động thành công. Đo kiểm điện áp nạp máy phát ổn định 14.1V. Khuyến nghị tài xế bảo dưỡng thay bình ắc quy mới trong vòng 1-2 tháng do dung lượng cũ sụt giảm còn 45%."
+            )
+
+            _userRequests.value = listOf(sampleRequest) + _userRequests.value.filter { it.id != reqId }
+            _allRequests.value = listOf(sampleRequest) + _allRequests.value.filter { it.id != reqId }
+            _isLoading.value = false
+            _statusMessage.value = "Đã lưu yêu cầu cứu hộ mẫu vào Firebase!"
+
+            try {
+                firebaseManager.createRescueRequest(sampleRequest)
+            } catch (e: Exception) {
+                Log.w(TAG, "Firebase sample seeding: ${e.message}")
+            }
+
+            onSuccess(sampleRequest)
         }
     }
 

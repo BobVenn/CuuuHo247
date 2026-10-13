@@ -85,7 +85,8 @@ data class RescueRequest(
     val emergencyContactPhone: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     val rating: Int? = null,
-    val ratingComment: String? = null
+    val ratingComment: String? = null,
+    val technicianFeedback: String? = null // Nhận xét, chẩn đoán kỹ thuật & khuyến nghị từ KTV
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
         "id" to id,
@@ -110,7 +111,8 @@ data class RescueRequest(
         "emergencyContactPhone" to emergencyContactPhone,
         "timestamp" to timestamp,
         "rating" to rating,
-        "ratingComment" to ratingComment
+        "ratingComment" to ratingComment,
+        "technicianFeedback" to technicianFeedback
     )
 }
 
