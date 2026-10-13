@@ -82,6 +82,13 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
     private val _allStaffApplications = MutableStateFlow<List<StaffApplication>>(emptyList())
     val allStaffApplications: StateFlow<List<StaffApplication>> = _allStaffApplications.asStateFlow()
 
+    // Realtime Service Availability (Towing, Jump-start, Tire change, etc.) fetched from Firebase
+    private val _serviceAvailability = MutableStateFlow<List<ServiceAvailabilityItem>>(emptyList())
+    val serviceAvailability: StateFlow<List<ServiceAvailabilityItem>> = _serviceAvailability.asStateFlow()
+
+    private val _isServicesLoading = MutableStateFlow(false)
+    val isServicesLoading: StateFlow<Boolean> = _isServicesLoading.asStateFlow()
+
     // Status / Feedback
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -285,6 +292,7 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
         observeCurrentUserRequests()
         observeAllRequestsForStaff()
         observeStaffApplications()
+        observeServiceAvailability()
     }
 
     fun clearStatusMessage() {
@@ -514,6 +522,8 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
                 licensePlate = licensePlate.ifBlank { userProfile.licensePlate },
                 status = AppConfig.RequestStatus.PENDING,
                 imageUrl = imageUrl,
+                emergencyContact = if (userProfile.emergencyContactName.isNotBlank()) "${userProfile.emergencyContactName} (${userProfile.emergencyRelationship})" else null,
+                emergencyContactPhone = userProfile.emergencyContactPhone.ifBlank { null },
                 timestamp = System.currentTimeMillis()
             )
 
@@ -912,6 +922,60 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             firebaseManager.getAllStaffApplicationsFlow().collect { list ->
                 _allStaffApplications.value = list
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // SERVICE AVAILABILITY OPERATIONS (Firebase Realtime Database)
+    // -------------------------------------------------------------
+
+    private fun observeServiceAvailability() {
+        viewModelScope.launch {
+            _isServicesLoading.value = true
+            // Ensure initial node seeding in Firebase
+            try {
+                firebaseManager.seedDefaultServicesIfEmpty()
+            } catch (e: Exception) {
+                Log.w(TAG, "seedDefaultServicesIfEmpty warning: ${e.message}")
+            }
+
+            firebaseManager.getServiceAvailabilityFlow()
+                .catch { e ->
+                    Log.w(TAG, "getServiceAvailabilityFlow error: ${e.message}")
+                    _serviceAvailability.value = firebaseManager.getDefaultServiceAvailabilityList()
+                    _isServicesLoading.value = false
+                }
+                .collect { list ->
+                    _serviceAvailability.value = list
+                    _isServicesLoading.value = false
+                }
+        }
+    }
+
+    fun refreshServiceAvailability() {
+        viewModelScope.launch {
+            _isServicesLoading.value = true
+            try {
+                firebaseManager.seedDefaultServicesIfEmpty()
+                _statusMessage.value = "Đã làm mới dữ liệu sẵn sàng cứu hộ từ Firebase"
+            } catch (e: Exception) {
+                _statusMessage.value = "Không thể làm mới: ${e.message}"
+            } finally {
+                _isServicesLoading.value = false
+            }
+        }
+    }
+
+    fun toggleServiceAvailability(serviceId: String, isAvailable: Boolean) {
+        viewModelScope.launch {
+            val res = firebaseManager.updateServiceAvailability(serviceId, isAvailable)
+            if (res.isSuccess) {
+                val serviceName = _serviceAvailability.value.find { it.id == serviceId }?.name ?: serviceId
+                val statusStr = if (isAvailable) "SẴN SÀNG TIẾP NHẬN" else "TẠM BẬN"
+                _statusMessage.value = "$serviceName hiện ở trạng thái: $statusStr"
+            } else {
+                _statusMessage.value = "Lỗi cập nhật trạng thái: ${res.exceptionOrNull()?.message}"
             }
         }
     }

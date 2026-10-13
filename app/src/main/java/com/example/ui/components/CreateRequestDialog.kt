@@ -564,6 +564,45 @@ fun CreateRequestDialog(
                     }
                 }
 
+                // THÔNG TIN ĐIỀU PHỐI KHẨN CẤP ĐÃ LƯU
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SafeGreen.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, SafeGreen.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VerifiedUser,
+                            contentDescription = null,
+                            tint = SafeGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Điều phối nhanh theo hồ sơ Firebase Auth",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SafeGreen
+                            )
+                            val contactInfo = if (userProfile.emergencyContactPhone.isNotBlank()) {
+                                "Tài xế: ${userProfile.displayName} (${userProfile.phone}) • ICE: ${userProfile.emergencyContactName}"
+                            } else {
+                                "Tài xế: ${userProfile.displayName} (${userProfile.phone}) • Đã sẵn sàng định vị"
+                            }
+                            Text(
+                                text = contactInfo,
+                                fontSize = 10.sp,
+                                color = OnSurfaceVariantLight
+                            )
+                        }
+                    }
+                }
+
                 // SUBMIT BUTTON (XÁC NHẬN ĐẶT CỨU HỘ)
                 Button(
                     onClick = {

@@ -432,9 +432,29 @@ private fun buildLeafletHtmlContent(
                 0% { transform: scale(0.6); opacity: 1; }
                 100% { transform: scale(1.6); opacity: 0; }
             }
-            /* Technician / Vehicle Marker */
+            /* Technician / Rescue Vehicle Marker */
             .tech-marker-icon {
-                background: #ea580c;
+                background: linear-gradient(135deg, #0284c7, #0369a1);
+                color: #ffffff;
+                border: 2.5px solid #ffffff;
+                border-radius: 50%;
+                width: 38px;
+                height: 38px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.65);
+                font-size: 19px;
+                animation: techPulse 2s infinite ease-in-out;
+            }
+            @keyframes techPulse {
+                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
+                70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(2, 132, 199, 0); }
+                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+            }
+            /* Patrol / Standby Unit Marker */
+            .patrol-marker-icon {
+                background: #16a34a;
                 color: #ffffff;
                 border: 2px solid #ffffff;
                 border-radius: 50%;
@@ -443,7 +463,7 @@ private fun buildLeafletHtmlContent(
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 10px rgba(234, 88, 12, 0.5);
+                box-shadow: 0 3px 8px rgba(22, 163, 74, 0.45);
                 font-size: 15px;
             }
             /* Request / Incident Alert Marker */
@@ -507,18 +527,25 @@ private fun buildLeafletHtmlContent(
 
             // Add Provided Markers
             var markersData = [$markersJs];
+            var allBoundsPoints = [[$centerLat, $centerLng]];
+
             markersData.forEach(function(m) {
-                var iconClass = m.type === 'TECHNICIAN' || m.type === 'PATROL' ? 'tech-marker-icon' : 'alert-marker-icon';
-                var iconEmoji = m.type === 'TECHNICIAN' ? '🚚' : (m.status === 'COMPLETED' ? '✅' : '⚠️');
+                var iconClass = m.type === 'TECHNICIAN' ? 'tech-marker-icon' : (m.type === 'PATROL' ? 'patrol-marker-icon' : 'alert-marker-icon');
+                var iconEmoji = m.type === 'TECHNICIAN' ? '🚚' : (m.type === 'PATROL' ? '🚓' : (m.status === 'COMPLETED' ? '✅' : '⚠️'));
+                var markerSize = m.type === 'TECHNICIAN' ? [38, 38] : [32, 32];
+                var anchorSize = m.type === 'TECHNICIAN' ? [19, 19] : [16, 16];
+
                 var markerIcon = L.divIcon({
                     className: '',
                     html: '<div class="' + iconClass + '">' + iconEmoji + '</div>',
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
+                    iconSize: markerSize,
+                    iconAnchor: anchorSize
                 });
 
                 var mark = L.marker([m.lat, m.lng], { icon: markerIcon }).addTo(map);
-                mark.bindPopup("<b>" + m.title + "</b><br/><span>" + m.snippet + "</span><br/><small style='color:#ea580c;'>Tọa độ: " + m.lat.toFixed(4) + ", " + m.lng.toFixed(4) + "</small>");
+                mark.bindPopup("<b>" + m.title + "</b><br/><span>" + m.snippet + "</span><br/><small style='color:#ea580c;font-weight:bold;'>Tọa độ: " + m.lat.toFixed(4) + ", " + m.lng.toFixed(4) + "</small>");
+
+                allBoundsPoints.push([m.lat, m.lng]);
 
                 mark.on('click', function() {
                     if (window.AndroidBridge && window.AndroidBridge.onMarkerClicked) {
@@ -541,23 +568,27 @@ private fun buildLeafletHtmlContent(
                 var destMarker = L.marker([destLat, destLng], { icon: destIcon }).addTo(map);
                 destMarker.bindPopup("<b>${destLabel.replace("\"", "\\\"")}</b><br/><button onclick='window.AndroidBridge.onNavigateAction(" + destLat + "," + destLng + ",\"" + "${destLabel.replace("\"", "\\\"")}" + "\")' style='background:#ea580c;color:#fff;border:none;border-radius:6px;padding:4px 8px;margin-top:6px;cursor:pointer;font-weight:bold;'>Chỉ đường</button>");
 
+                allBoundsPoints.push([destLat, destLng]);
+
                 // Draw route line
                 var routeCoords = [
                     [$centerLat, $centerLng],
                     [destLat, destLng]
                 ];
                 var routeLine = L.polyline(routeCoords, {
-                    color: '#ea580c',
-                    weight: 4,
-                    opacity: 0.85,
+                    color: '#0284c7',
+                    weight: 4.5,
+                    opacity: 0.9,
                     dashArray: '8, 8'
                 }).addTo(map);
-
-                // Fit bounds to show both points
-                var bounds = L.latLngBounds(routeCoords);
-                map.fitBounds(bounds, { padding: [50, 50] });
                 """.trimIndent()
             } else ""}
+
+            // Fit bounds smoothly if multiple points exist
+            if (allBoundsPoints.length > 1) {
+                var bounds = L.latLngBounds(allBoundsPoints);
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+            }
 
             map.on('click', function() {
                 if (window.AndroidBridge && window.AndroidBridge.onMapClicked) {

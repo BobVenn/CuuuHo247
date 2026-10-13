@@ -16,6 +16,13 @@ data class UserProfile(
     val licensePlate: String = "",
     val partnerStatus: String = AppConfig.PartnerApplicationStatus.NONE, // "NONE", "PENDING", "APPROVED", "REJECTED"
     val partnerRejectionReason: String? = null,
+    // Thông tin liên hệ khẩn cấp (In Case of Emergency - ICE) phục vụ điều phối nhanh
+    val emergencyContactName: String = "",
+    val emergencyContactPhone: String = "",
+    val emergencyRelationship: String = "Người thân", // Vợ/Chồng, Bố/Mẹ, Anh/Em, Đồng nghiệp...
+    val bloodType: String = "", // O+, A+, B+, AB+, Chưa rõ
+    val emergencyNotes: String = "", // Dị ứng, tiền sử bệnh hoặc ghi chú cứu hộ đặc biệt
+    val homeAddress: String = "", // Địa chỉ cứu hộ thường trú / Nhà riêng
     val createdAt: Long = System.currentTimeMillis()
 ) {
     fun toMap(): Map<String, Any?> = mapOf(
@@ -29,6 +36,12 @@ data class UserProfile(
         "licensePlate" to licensePlate,
         "partnerStatus" to partnerStatus,
         "partnerRejectionReason" to partnerRejectionReason,
+        "emergencyContactName" to emergencyContactName,
+        "emergencyContactPhone" to emergencyContactPhone,
+        "emergencyRelationship" to emergencyRelationship,
+        "bloodType" to bloodType,
+        "emergencyNotes" to emergencyNotes,
+        "homeAddress" to homeAddress,
         "createdAt" to createdAt
     )
 }
@@ -68,6 +81,8 @@ data class RescueRequest(
     val cost: Long? = null,
     val paymentStatus: String = "UNPAID", // "UNPAID", "PAID_CASH", "PAID_VIETQR"
     val imageUrl: String? = null,
+    val emergencyContact: String? = null,
+    val emergencyContactPhone: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     val rating: Int? = null,
     val ratingComment: String? = null
@@ -91,6 +106,8 @@ data class RescueRequest(
         "cost" to cost,
         "paymentStatus" to paymentStatus,
         "imageUrl" to imageUrl,
+        "emergencyContact" to emergencyContact,
+        "emergencyContactPhone" to emergencyContactPhone,
         "timestamp" to timestamp,
         "rating" to rating,
         "ratingComment" to ratingComment
@@ -239,4 +256,44 @@ data class StatusChangeEvent(
     val newStatus: String,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+/**
+ * Model trạng thái sẵn sàng phục vụ của các dịch vụ cứu hộ
+ * Lưu tại node "services_availability/{serviceId}" trong Firebase Realtime Database
+ */
+data class ServiceAvailabilityItem(
+    val id: String = "",                       // "towing", "jump_start", "tire_change", "fuel_delivery", "lockout", "mobile_repair"
+    val name: String = "",                     // Tên dịch vụ hiển thị
+    val issueType: String = "",                // Liên kết với CreateRequestDialog: "Tai nạn", "Hết bình", "Thủng lốp", v.v.
+    val category: String = "EMERGENCY",        // "TOWING", "BATTERY", "TIRE", "FUEL", "LOCKSMITH", "MECHANIC"
+    val isAvailable: Boolean = true,           // Sẵn sàng (true) hoặc Tạm bận / bảo trì (false)
+    val availabilityStatus: String = "AVAILABLE", // "AVAILABLE", "BUSY", "HIGH_DEMAND"
+    val statusText: String = "Sẵn sàng phục vụ 24/7",
+    val etaMinutes: Int = 15,                  // Thời gian kỹ thuật viên có mặt ước tính (phút)
+    val activeTechnicians: Int = 4,            // Số lượng KTV / xe cứu hộ đang trực
+    val priceDisplay: String = "Từ 450.000đ",   // Giá niêm yết công khai
+    val basePrice: Long = 450000L,
+    val description: String = "",
+    val iconKey: String = "towing",            // towing, jump_start, tire_change, fuel_delivery, lockout, mobile_repair
+    val operatingHours: String = "24/7 Toàn quốc",
+    val updatedTimestamp: Long = System.currentTimeMillis()
+) {
+    fun toMap(): Map<String, Any?> = mapOf(
+        "id" to id,
+        "name" to name,
+        "issueType" to issueType,
+        "category" to category,
+        "isAvailable" to isAvailable,
+        "availabilityStatus" to availabilityStatus,
+        "statusText" to statusText,
+        "etaMinutes" to etaMinutes,
+        "activeTechnicians" to activeTechnicians,
+        "priceDisplay" to priceDisplay,
+        "basePrice" to basePrice,
+        "description" to description,
+        "iconKey" to iconKey,
+        "operatingHours" to operatingHours,
+        "updatedTimestamp" to updatedTimestamp
+    )
+}
 

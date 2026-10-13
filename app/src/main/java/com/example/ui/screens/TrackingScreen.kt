@@ -25,6 +25,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.RescueRequestEntity
+import com.example.ui.components.LeafletMapView
+import com.example.ui.components.LeafletMapMarker
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -157,134 +159,94 @@ fun TrackingScreen(
                     .padding(bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Animated Radar Canvas Map Simulation
+                // Interactive Leaflet Map visualizing real-time incoming rescue vehicle
+                val reqLat = if (activeRequest.latitude != 0.0) activeRequest.latitude else 21.0285
+                val reqLng = if (activeRequest.longitude != 0.0) activeRequest.longitude else 105.8542
+
+                val (techLat, techLng) = when (activeRequest.status) {
+                    "ACCEPTED" -> Pair(reqLat + 0.016, reqLng + 0.013)
+                    "ARRIVED", "IN_PROGRESS" -> Pair(reqLat + 0.0003, reqLng + 0.0003)
+                    else -> Pair(reqLat + 0.0075, reqLng + 0.0062)
+                }
+
+                val trackingMarkers = listOf(
+                    LeafletMapMarker(
+                        id = "user_dest_${activeRequest.id}",
+                        title = "Vị trí của bạn: ${activeRequest.serviceType}",
+                        snippet = activeRequest.locationAddress,
+                        latitude = reqLat,
+                        longitude = reqLng,
+                        type = "REQUEST",
+                        status = activeRequest.status
+                    ),
+                    LeafletMapMarker(
+                        id = "tech_vehicle_${activeRequest.id}",
+                        title = "Xe Cứu Hộ: ${activeRequest.technicianName}",
+                        snippet = "Cách bạn ${activeRequest.estimatedDistanceKm} km • ETA: ${activeRequest.estimatedMinutes} phút",
+                        latitude = techLat,
+                        longitude = techLng,
+                        type = "TECHNICIAN",
+                        status = activeRequest.status
+                    )
+                )
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp)
-                        .testTag("radar_simulation_map"),
+                        .testTag("leaflet_tracking_map_card"),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = RescueSecondary)
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val centerX = size.width / 2
-                            val centerY = size.height / 2
-                            val maxRadius = minOf(centerX, centerY) * 0.85f
-
-                            // Draw radar rings
-                            for (i in 1..3) {
-                                drawCircle(
-                                    color = Color(0xFF334155),
-                                    radius = maxRadius * (i / 3f),
-                                    center = Offset(centerX, centerY),
-                                    style = Stroke(width = 1.5f)
-                                )
-                            }
-
-                            // Crosshair lines
-                            drawLine(
-                                color = Color(0xFF334155),
-                                start = Offset(centerX - maxRadius, centerY),
-                                end = Offset(centerX + maxRadius, centerY),
-                                strokeWidth = 1f
-                            )
-                            drawLine(
-                                color = Color(0xFF334155),
-                                start = Offset(centerX, centerY - maxRadius),
-                                end = Offset(centerX, centerY + maxRadius),
-                                strokeWidth = 1f
-                            )
-
-                            // Radar sweep beam
-                            val rad = Math.toRadians(sweepAngle.toDouble())
-                            val sweepX = centerX + maxRadius * cos(rad).toFloat()
-                            val sweepY = centerY + maxRadius * sin(rad).toFloat()
-                            drawLine(
-                                color = RescuePrimary.copy(alpha = 0.7f),
-                                start = Offset(centerX, centerY),
-                                end = Offset(sweepX, sweepY),
-                                strokeWidth = 2.5f
-                            )
-
-                            // User car marker (Center)
-                            drawCircle(
-                                color = AlertRed.copy(alpha = pingPulse * 0.4f),
-                                radius = 24f * pingPulse,
-                                center = Offset(centerX, centerY)
-                            )
-                            drawCircle(
-                                color = AlertRed,
-                                radius = 9f,
-                                center = Offset(centerX, centerY)
-                            )
-
-                            // Rescue vehicle marker (Approaching)
-                            val distanceFactor = (activeRequest.estimatedDistanceKm / 4.0).coerceIn(0.15, 0.75)
-                            val techX = centerX + (maxRadius * distanceFactor * 0.8f).toFloat()
-                            val techY = centerY - (maxRadius * distanceFactor * 0.6f).toFloat()
-
-                            drawCircle(
-                                color = RescuePrimary.copy(alpha = 0.35f),
-                                radius = 18f,
-                                center = Offset(techX, techY)
-                            )
-                            drawCircle(
-                                color = EmergencyGold,
-                                radius = 10f,
-                                center = Offset(techX, techY)
-                            )
-                        }
-
-                        // Status Badge on Map
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.Black.copy(alpha = 0.6f)
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = if (activeRequest.status == "ARRIVED" || activeRequest.status == "IN_PROGRESS") SafeGreen else RescuePrimary,
-                                    modifier = Modifier.size(8.dp)
-                                ) {}
+                                    color = Color(0xFF0284C7).copy(alpha = 0.15f),
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                Column {
+                                    Text("Bản Đồ Định Vị Xe Cứu Hộ", fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                                    Text("Mã đơn #${activeRequest.orderCode} • OpenStreetMap", fontSize = 11.sp, color = OnSurfaceVariantLight)
+                                }
+                            }
+
+                            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2FE)) {
                                 Text(
-                                    text = "Mã đơn: ${activeRequest.orderCode}",
-                                    color = Color.White,
+                                    text = if (activeRequest.status in listOf("ARRIVED", "IN_PROGRESS")) "ĐÃ ĐẾN NƠI" else "${activeRequest.estimatedMinutes} phút",
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF0284C7),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         }
 
-                        // ETA Pill on Map
-                        Surface(
+                        LeafletMapView(
+                            centerLat = techLat,
+                            centerLng = techLng,
+                            centerAddress = "Xe cứu hộ đang đến",
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(12.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = RescuePrimary
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text(
-                                    text = if (activeRequest.status in listOf("ARRIVED", "IN_PROGRESS")) "ĐÃ ĐẾN HIỆN TRƯỜNG" else "Dự kiến: ${activeRequest.estimatedMinutes} phút (${activeRequest.estimatedDistanceKm} km)",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
+                                .fillMaxWidth()
+                                .height(220.dp),
+                            markers = trackingMarkers,
+                            routeDestinationLat = reqLat,
+                            routeDestinationLng = reqLng,
+                            routeDestinationLabel = "Vị trí cứu hộ: ${activeRequest.locationAddress}"
+                        )
                     }
                 }
 

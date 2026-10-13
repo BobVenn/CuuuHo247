@@ -393,6 +393,12 @@ class AuthViewModel : ViewModel() {
         vehicleName: String,
         licensePlate: String,
         role: String? = null,
+        emergencyContactName: String? = null,
+        emergencyContactPhone: String? = null,
+        emergencyRelationship: String? = null,
+        bloodType: String? = null,
+        emergencyNotes: String? = null,
+        homeAddress: String? = null,
         onSuccess: () -> Unit = {}
     ) {
         val current = _userProfile.value ?: return
@@ -402,7 +408,13 @@ class AuthViewModel : ViewModel() {
             vehicleType = vehicleType.ifBlank { current.vehicleType },
             vehicleName = vehicleName.ifBlank { current.vehicleName },
             licensePlate = licensePlate.ifBlank { current.licensePlate },
-            role = role ?: current.role
+            role = role ?: current.role,
+            emergencyContactName = emergencyContactName ?: current.emergencyContactName,
+            emergencyContactPhone = emergencyContactPhone ?: current.emergencyContactPhone,
+            emergencyRelationship = emergencyRelationship ?: current.emergencyRelationship,
+            bloodType = bloodType ?: current.bloodType,
+            emergencyNotes = emergencyNotes ?: current.emergencyNotes,
+            homeAddress = homeAddress ?: current.homeAddress
         )
 
         viewModelScope.launch {
@@ -411,14 +423,44 @@ class AuthViewModel : ViewModel() {
             _isLoading.value = false
             if (result.isSuccess) {
                 _userProfile.value = updated
-                _successMessage.value = "Cập nhật thông tin thành công"
+                _successMessage.value = "Cập nhật hồ sơ cứu hộ thành công"
                 onSuccess()
             } else {
                 _userProfile.value = updated
-                _successMessage.value = "Đã lưu thông tin hồ sơ"
+                _successMessage.value = "Đã lưu hồ sơ cứu hộ trên thiết bị"
                 onSuccess()
             }
         }
+    }
+
+    fun updateEmergencyContactProfile(
+        displayName: String,
+        phone: String,
+        vehicleType: String,
+        vehicleName: String,
+        licensePlate: String,
+        emergencyContactName: String,
+        emergencyContactPhone: String,
+        emergencyRelationship: String,
+        bloodType: String,
+        emergencyNotes: String,
+        homeAddress: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        updateProfile(
+            displayName = displayName,
+            phone = phone,
+            vehicleType = vehicleType,
+            vehicleName = vehicleName,
+            licensePlate = licensePlate,
+            emergencyContactName = emergencyContactName,
+            emergencyContactPhone = emergencyContactPhone,
+            emergencyRelationship = emergencyRelationship,
+            bloodType = bloodType,
+            emergencyNotes = emergencyNotes,
+            homeAddress = homeAddress,
+            onSuccess = onSuccess
+        )
     }
 
     fun signOut() {

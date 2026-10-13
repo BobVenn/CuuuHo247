@@ -70,6 +70,7 @@ sealed class AppScreen {
     data class RequestDetail(val request: RescueRequest) : AppScreen()
     data class Chat(val request: RescueRequest) : AppScreen()
     object Reports : AppScreen()
+    object GoogleMapsFinder : AppScreen()
 }
 
 @Composable
@@ -95,6 +96,8 @@ fun MainAppHost(
     val userRatings by rescueViewModel.userRatings.collectAsStateWithLifecycle()
     val userReports by rescueViewModel.userReports.collectAsStateWithLifecycle()
     val savedVehicles by rescueViewModel.savedVehicles.collectAsStateWithLifecycle()
+    val serviceAvailability by rescueViewModel.serviceAvailability.collectAsStateWithLifecycle()
+    val isServicesLoading by rescueViewModel.isServicesLoading.collectAsStateWithLifecycle()
     val statusMessage by rescueViewModel.statusMessage.collectAsStateWithLifecycle()
     val newRescueAlert by rescueViewModel.newRescueAlertEvent.collectAsStateWithLifecycle()
     val statusChangeEvent by rescueViewModel.statusChangeEvent.collectAsStateWithLifecycle()
@@ -281,6 +284,20 @@ fun MainAppHost(
                                 userProfile = it
                             )
                         }
+                    }
+                )
+            }
+
+            is AppScreen.GoogleMapsFinder -> {
+                BackHandler {
+                    currentScreen = AppScreen.MainTabs
+                }
+                GoogleMapsGroundingScreen(
+                    currentLocation = currentLocation,
+                    onBack = { currentScreen = AppScreen.MainTabs },
+                    onDirectRequestWithLocation = { placeTitle, placeAddress ->
+                        currentScreen = AppScreen.MainTabs
+                        currentTab = MainNavTab.HOME
                     }
                 )
             }
@@ -593,6 +610,34 @@ fun MainAppHost(
                                 onToggleRealtimeTracking = { rescueViewModel.toggleRealtimeTracking() },
                                 activeRequest = activeRequest,
                                 recentRequests = userRequests,
+                                serviceAvailability = serviceAvailability,
+                                isServicesLoading = isServicesLoading,
+                                onRefreshServices = { rescueViewModel.refreshServiceAvailability() },
+                                onToggleServiceAvailability = { id, isAvail ->
+                                    rescueViewModel.toggleServiceAvailability(id, isAvail)
+                                },
+                                savedVehicles = savedVehicles,
+                                onUpdateEmergencyProfile = { name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, homeAddr ->
+                                    authViewModel.updateEmergencyContactProfile(
+                                        displayName = name,
+                                        phone = phone,
+                                        vehicleType = vType,
+                                        vehicleName = vName,
+                                        licensePlate = plate,
+                                        emergencyContactName = iceName,
+                                        emergencyContactPhone = icePhone,
+                                        emergencyRelationship = iceRel,
+                                        bloodType = blood,
+                                        emergencyNotes = notes,
+                                        homeAddress = homeAddr
+                                    )
+                                },
+                                onAddSavedVehicle = { name, vType, plate, insp, insu ->
+                                    rescueViewModel.addSavedVehicle(name, vType, plate, insp, insu)
+                                },
+                                onRemoveSavedVehicle = { id ->
+                                    rescueViewModel.removeSavedVehicle(id)
+                                },
                                 onRefreshLocation = { rescueViewModel.refreshLocation() },
                                 onEmergencySosCall = {
                                     activeInAppCall = InAppCallInfo(
@@ -629,6 +674,9 @@ fun MainAppHost(
                                         currentLocation.longitude
                                     )
                                 },
+                                onNavigateToGoogleMapsFinder = {
+                                    currentScreen = AppScreen.GoogleMapsFinder
+                                },
                                 onUpdateStatus = { id, st ->
                                     rescueViewModel.updateRequestStatus(id, st)
                                 }
@@ -640,8 +688,15 @@ fun MainAppHost(
                                 userProfile = userProfile,
                                 currentLocation = currentLocation,
                                 savedVehicles = savedVehicles,
+                                serviceAvailability = serviceAvailability,
+                                isServicesLoading = isServicesLoading,
+                                onRefreshServices = { rescueViewModel.refreshServiceAvailability() },
+                                onToggleServiceAvailability = { id, isAvail ->
+                                    rescueViewModel.toggleServiceAvailability(id, isAvail)
+                                },
                                 onRefreshLocation = { rescueViewModel.refreshLocation() },
                                 onCallPhone = { phone -> rescueViewModel.triggerEmergencySosDialer(context, phone) },
+                                onOpenGoogleMapsFinder = { currentScreen = AppScreen.GoogleMapsFinder },
                                 onSubmitRequest = { issue, desc, vType, plate, img ->
                                     val prof = userProfile ?: UserProfile(displayName = "Khách hàng")
                                     rescueViewModel.createRescueRequest(
@@ -671,6 +726,7 @@ fun MainAppHost(
                         MainNavTab.PROFILE -> {
                             ProfileScreen(
                                 userProfile = userProfile,
+                                currentUser = currentUser,
                                 myRatings = userRatings,
                                 savedVehicles = savedVehicles,
                                 onAddVehicle = { name, vType, plate, insp, insu ->
@@ -681,6 +737,21 @@ fun MainAppHost(
                                 },
                                 onUpdateProfile = { name, phone, vType, vName, plate, role ->
                                     authViewModel.updateProfile(name, phone, vType, vName, plate, role)
+                                },
+                                onUpdateEmergencyProfile = { name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, homeAddr ->
+                                    authViewModel.updateEmergencyContactProfile(
+                                        displayName = name,
+                                        phone = phone,
+                                        vehicleType = vType,
+                                        vehicleName = vName,
+                                        licensePlate = plate,
+                                        emergencyContactName = iceName,
+                                        emergencyContactPhone = icePhone,
+                                        emergencyRelationship = iceRel,
+                                        bloodType = blood,
+                                        emergencyNotes = notes,
+                                        homeAddress = homeAddr
+                                    )
                                 },
                                 onSwitchRole = { role ->
                                     authViewModel.switchUserRole(role)

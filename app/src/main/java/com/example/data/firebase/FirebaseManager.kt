@@ -87,6 +87,7 @@ class FirebaseManager private constructor() {
     val reportsRef: DatabaseReference = database.getReference("reports")
     val usersRef: DatabaseReference = database.getReference("users")
     val staffApplicationsRef: DatabaseReference = database.getReference("staff_applications")
+    val servicesAvailabilityRef: DatabaseReference = database.getReference("services_availability")
 
     // -------------------------------------------------------------
     // AUTHENTICATION
@@ -229,6 +230,12 @@ class FirebaseManager private constructor() {
                     val plate = snapshot.child("licensePlate").getValue(String::class.java) ?: ""
                     val pStatus = snapshot.child("partnerStatus").getValue(String::class.java) ?: AppConfig.PartnerApplicationStatus.NONE
                     val pReason = snapshot.child("partnerRejectionReason").getValue(String::class.java)
+                    val emerContact = snapshot.child("emergencyContactName").getValue(String::class.java) ?: ""
+                    val emerPhone = snapshot.child("emergencyContactPhone").getValue(String::class.java) ?: ""
+                    val emerRel = snapshot.child("emergencyRelationship").getValue(String::class.java) ?: "Người thân"
+                    val bType = snapshot.child("bloodType").getValue(String::class.java) ?: ""
+                    val eNotes = snapshot.child("emergencyNotes").getValue(String::class.java) ?: ""
+                    val hAddr = snapshot.child("homeAddress").getValue(String::class.java) ?: ""
                     val created = snapshot.child("createdAt").getValue(Long::class.java) ?: System.currentTimeMillis()
 
                     val profile = UserProfile(
@@ -242,6 +249,12 @@ class FirebaseManager private constructor() {
                         licensePlate = plate,
                         partnerStatus = pStatus,
                         partnerRejectionReason = pReason,
+                        emergencyContactName = emerContact,
+                        emergencyContactPhone = emerPhone,
+                        emergencyRelationship = emerRel,
+                        bloodType = bType,
+                        emergencyNotes = eNotes,
+                        homeAddress = hAddr,
                         createdAt = created
                     )
                     trySend(profile)
@@ -265,6 +278,17 @@ class FirebaseManager private constructor() {
     suspend fun updateUserProfile(profile: UserProfile): Result<Unit> {
         return try {
             usersRef.child(profile.uid).updateChildren(profile.toMap()).await()
+            val currentFbUser = auth.currentUser
+            if (currentFbUser != null && currentFbUser.uid == profile.uid && profile.displayName.isNotBlank()) {
+                try {
+                    val updateReq = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setDisplayName(profile.displayName)
+                        .build()
+                    currentFbUser.updateProfile(updateReq).await()
+                } catch (e: Exception) {
+                    Log.w(TAG, "FirebaseAuth updateProfile non-fatal: ${e.message}")
+                }
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "updateUserProfile failed: ${e.message}", e)
@@ -466,6 +490,8 @@ class FirebaseManager private constructor() {
         }
         val rating = snapshot.child("rating").getValue(Int::class.java)
         val ratingComment = snapshot.child("ratingComment").getValue(String::class.java)
+        val emerContact = snapshot.child("emergencyContact").getValue(String::class.java)
+        val emerPhone = snapshot.child("emergencyContactPhone").getValue(String::class.java)
 
         return RescueRequest(
             id = id,
@@ -486,6 +512,8 @@ class FirebaseManager private constructor() {
             cost = cost,
             paymentStatus = paymentStatus,
             imageUrl = imageUrl,
+            emergencyContact = emerContact,
+            emergencyContactPhone = emerPhone,
             timestamp = time,
             rating = rating,
             ratingComment = ratingComment
@@ -803,6 +831,239 @@ class FirebaseManager private constructor() {
             )
         } catch (e: Exception) {
             Log.e(TAG, "parseStaffApplication error: ${e.message}", e)
+            null
+        }
+    }
+
+    // -------------------------------------------------------------
+    // SERVICES AVAILABILITY (TOWING, JUMP-START, TIRE CHANGE, ETC.)
+    // -------------------------------------------------------------
+
+    fun getDefaultServiceAvailabilityList(): List<ServiceAvailabilityItem> = listOf(
+        ServiceAvailabilityItem(
+            id = "towing",
+            name = "Cẩu kéo xe cứu hộ sàn trượt",
+            issueType = "Tai nạn",
+            category = "TOWING",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • 4 xe trực",
+            etaMinutes = 20,
+            activeTechnicians = 4,
+            priceDisplay = "Từ 450.000đ",
+            basePrice = 450000L,
+            description = "Xe sàn trượt thủy lực hiện đại kéo xe ô tô 4-7 chỗ, gầm thấp, số tự động hoặc tai nạn về Gara theo yêu cầu.",
+            iconKey = "towing",
+            operatingHours = "24/7 Toàn quốc"
+        ),
+        ServiceAvailabilityItem(
+            id = "jump_start",
+            name = "Kích nổ bình ắc quy ô tô & xe máy",
+            issueType = "Hết bình",
+            category = "BATTERY",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • 6 xe trực",
+            etaMinutes = 12,
+            activeTechnicians = 6,
+            priceDisplay = "Từ 200.000đ",
+            basePrice = 200000L,
+            description = "Kích nổ bình điện khẩn cấp lưu động bằng máy kích Lithium cao cấp, đo kiểm điện áp và sạc máy phát miễn phí.",
+            iconKey = "jump_start",
+            operatingHours = "24/7 Toàn quốc"
+        ),
+        ServiceAvailabilityItem(
+            id = "tire_change",
+            name = "Vá lốp & Thay bánh sơ cua lưu động",
+            issueType = "Thủng lốp",
+            category = "TIRE",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • 5 xe trực",
+            etaMinutes = 15,
+            activeTechnicians = 5,
+            priceDisplay = "Từ 120.000đ",
+            basePrice = 120000L,
+            description = "Vá nấm, vá dùi hoặc thay bánh phụ sơ cua ô tô, xe máy tận nơi. Trang bị kích thủy lực an toàn không móp gầm xe.",
+            iconKey = "tire_change",
+            operatingHours = "24/7 Toàn quốc"
+        ),
+        ServiceAvailabilityItem(
+            id = "fuel_delivery",
+            name = "Tiếp xăng dầu khẩn cấp tận nơi",
+            issueType = "Xe hết xăng",
+            category = "FUEL",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • Can 5L-10L",
+            etaMinutes = 15,
+            activeTechnicians = 3,
+            priceDisplay = "150.000đ + Nhiên liệu",
+            basePrice = 150000L,
+            description = "Giao can xăng RON 95 hoặc dầu Diesel đạt chuẩn Petrolimex tận nơi khi xe hết nhiên liệu giữa đường.",
+            iconKey = "fuel_delivery",
+            operatingHours = "24/7 Toàn quốc"
+        ),
+        ServiceAvailabilityItem(
+            id = "locksmith",
+            name = "Mở khóa ô tô quên chìa trong xe",
+            issueType = "Khóa xe",
+            category = "LOCKSMITH",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • Chuyên dụng",
+            etaMinutes = 20,
+            activeTechnicians = 2,
+            priceDisplay = "Từ 300.000đ",
+            basePrice = 300000L,
+            description = "Mở khóa cửa ô tô bằng bóng hơi và cây gạt chốt chuyên dụng, cam kết tuyệt đối không trầy sơn hay móp cửa.",
+            iconKey = "locksmith",
+            operatingHours = "24/7 Toàn quốc"
+        ),
+        ServiceAvailabilityItem(
+            id = "mobile_repair",
+            name = "Khám xe & Sửa chữa lưu động",
+            issueType = "Hỏng xe",
+            category = "MECHANIC",
+            isAvailable = true,
+            availabilityStatus = "AVAILABLE",
+            statusText = "Đang sẵn sàng • Thợ lành nghề",
+            etaMinutes = 25,
+            activeTechnicians = 3,
+            priceDisplay = "Từ 150.000đ",
+            basePrice = 150000L,
+            description = "Xử lý đứt curoa, sôi nước làm mát, mất phanh, sự cố điện và khởi động xe tại chỗ.",
+            iconKey = "mobile_repair",
+            operatingHours = "24/7 Toàn quốc"
+        )
+    )
+
+    fun getServiceAvailabilityFlow(): Flow<List<ServiceAvailabilityItem>> = callbackFlow {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<ServiceAvailabilityItem>()
+                if (snapshot.exists() && snapshot.childrenCount > 0) {
+                    for (child in snapshot.children) {
+                        val item = parseServiceAvailability(child)
+                        if (item != null) {
+                            list.add(item)
+                        }
+                    }
+                }
+                if (list.isEmpty()) {
+                    // Fallback to default services while seeding
+                    trySend(getDefaultServiceAvailabilityList())
+                } else {
+                    trySend(list)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "getServiceAvailabilityFlow onCancelled: ${error.message}")
+                trySend(getDefaultServiceAvailabilityList())
+                close()
+            }
+        }
+
+        servicesAvailabilityRef.addValueEventListener(listener)
+        awaitClose { servicesAvailabilityRef.removeEventListener(listener) }
+    }
+
+    suspend fun seedDefaultServicesIfEmpty(): Result<Unit> {
+        return try {
+            val snapshot = servicesAvailabilityRef.get().await()
+            if (!snapshot.exists() || snapshot.childrenCount == 0L) {
+                Log.i(TAG, "Seeding default service availability data to Firebase Realtime Database...")
+                val defaults = getDefaultServiceAvailabilityList()
+                for (item in defaults) {
+                    servicesAvailabilityRef.child(item.id).setValue(item.toMap()).await()
+                }
+                Log.i(TAG, "Seeding default services complete: ${defaults.size} services uploaded.")
+            } else {
+                Log.d(TAG, "Services already present in Firebase (${snapshot.childrenCount} nodes).")
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "seedDefaultServicesIfEmpty error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateServiceAvailability(
+        serviceId: String,
+        isAvailable: Boolean,
+        statusText: String? = null,
+        etaMinutes: Int? = null,
+        activeTechnicians: Int? = null
+    ): Result<Unit> {
+        return try {
+            val updates = mutableMapOf<String, Any>(
+                "isAvailable" to isAvailable,
+                "availabilityStatus" to if (isAvailable) "AVAILABLE" else "BUSY",
+                "updatedTimestamp" to System.currentTimeMillis()
+            )
+            if (statusText != null) {
+                updates["statusText"] = statusText
+            } else {
+                updates["statusText"] = if (isAvailable) "Sẵn sàng phục vụ 24/7" else "Tạm bận • Đang xử lý ca khác"
+            }
+            if (etaMinutes != null) {
+                updates["etaMinutes"] = etaMinutes
+            }
+            if (activeTechnicians != null) {
+                updates["activeTechnicians"] = activeTechnicians
+            }
+
+            servicesAvailabilityRef.child(serviceId).updateChildren(updates).await()
+            Log.i(TAG, "updateServiceAvailability succeeded for $serviceId (available=$isAvailable)")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "updateServiceAvailability failed for $serviceId: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun parseServiceAvailability(snapshot: DataSnapshot): ServiceAvailabilityItem? {
+        return try {
+            val id = snapshot.child("id").getValue(String::class.java)
+                ?: snapshot.key ?: return null
+            val name = snapshot.child("name").getValue(String::class.java) ?: "Dịch vụ cứu hộ"
+            val issueType = snapshot.child("issueType").getValue(String::class.java) ?: "Hỏng xe"
+            val category = snapshot.child("category").getValue(String::class.java) ?: "EMERGENCY"
+            val isAvailable = snapshot.child("isAvailable").getValue(Boolean::class.java) ?: true
+            val availabilityStatus = snapshot.child("availabilityStatus").getValue(String::class.java)
+                ?: if (isAvailable) "AVAILABLE" else "BUSY"
+            val statusText = snapshot.child("statusText").getValue(String::class.java)
+                ?: if (isAvailable) "Sẵn sàng phục vụ 24/7" else "Tạm ngưng"
+            val etaMinutes = snapshot.child("etaMinutes").getValue(Int::class.java) ?: 15
+            val activeTechnicians = snapshot.child("activeTechnicians").getValue(Int::class.java) ?: 3
+            val priceDisplay = snapshot.child("priceDisplay").getValue(String::class.java) ?: "Liên hệ"
+            val basePrice = snapshot.child("basePrice").getValue(Long::class.java) ?: 0L
+            val description = snapshot.child("description").getValue(String::class.java) ?: ""
+            val iconKey = snapshot.child("iconKey").getValue(String::class.java) ?: id
+            val operatingHours = snapshot.child("operatingHours").getValue(String::class.java) ?: "24/7"
+            val updatedTimestamp = snapshot.child("updatedTimestamp").getValue(Long::class.java)
+                ?: System.currentTimeMillis()
+
+            ServiceAvailabilityItem(
+                id = id,
+                name = name,
+                issueType = issueType,
+                category = category,
+                isAvailable = isAvailable,
+                availabilityStatus = availabilityStatus,
+                statusText = statusText,
+                etaMinutes = etaMinutes,
+                activeTechnicians = activeTechnicians,
+                priceDisplay = priceDisplay,
+                basePrice = basePrice,
+                description = description,
+                iconKey = iconKey,
+                operatingHours = operatingHours,
+                updatedTimestamp = updatedTimestamp
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "parseServiceAvailability error: ${e.message}", e)
             null
         }
     }

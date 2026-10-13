@@ -383,15 +383,59 @@ fun RequestDetailScreen(
                 }
             }
 
-            // BẢN ĐỒ VỊ TRÍ SỰ CỐ & CHỈ ĐƯỜNG LÁI XE (Leaflet.js & OpenStreetMap)
+            // BẢN ĐỒ VỊ TRÍ SỰ CỐ & THEO DÕI XE CỨU HỘ THỜI GIAN THỰC (Leaflet.js & OpenStreetMap)
+            val isRescueVehicleActive = request.status in listOf(
+                AppConfig.RequestStatus.ACCEPTED,
+                AppConfig.RequestStatus.EN_ROUTE,
+                AppConfig.RequestStatus.ARRIVED,
+                AppConfig.RequestStatus.IN_PROGRESS
+            )
+
+            val baseLat = if (request.latitude != 0.0) request.latitude else 21.0285
+            val baseLng = if (request.longitude != 0.0) request.longitude else 105.8542
+
+            // Tọa độ xe cứu hộ đang di chuyển dựa trên tiến trình thực tế
+            data class VehicleTrackingTelemetry(
+                val lat: Double,
+                val lng: Double,
+                val distance: String,
+                val eta: String,
+                val statusDesc: String
+            )
+
+            val telemetry = remember(request.status, baseLat, baseLng) {
+                when (request.status) {
+                    AppConfig.RequestStatus.ACCEPTED -> {
+                        VehicleTrackingTelemetry(baseLat + 0.0165, baseLng + 0.0135, "2.8 km", "15-20 phút", "Xe cứu hộ đang chuẩn bị xuất phát từ trạm")
+                    }
+                    AppConfig.RequestStatus.EN_ROUTE -> {
+                        VehicleTrackingTelemetry(baseLat + 0.0075, baseLng + 0.0062, "1.2 km", "8-12 phút", "Xe cứu hộ đang di chuyển trên đường đến bạn")
+                    }
+                    AppConfig.RequestStatus.ARRIVED -> {
+                        VehicleTrackingTelemetry(baseLat + 0.0003, baseLng + 0.0003, "50 m", "Đã đến nơi", "Xe cứu hộ đã có mặt tại hiện trường sự cố")
+                    }
+                    AppConfig.RequestStatus.IN_PROGRESS -> {
+                        VehicleTrackingTelemetry(baseLat + 0.0002, baseLng + 0.0002, "Tại chỗ", "Đang xử lý", "KTV đang xử lý sự cố phương tiện tại chỗ")
+                    }
+                    else -> {
+                        VehicleTrackingTelemetry(baseLat + 0.0165, baseLng + 0.0135, "--", "--", "Chờ tiếp nhận điều phối")
+                    }
+                }
+            }
+            val techVehicleLat = telemetry.lat
+            val techVehicleLng = telemetry.lng
+            val vehicleDistanceStr = telemetry.distance
+            val vehicleEtaStr = telemetry.eta
+            val vehicleStatusDesc = telemetry.statusDesc
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("request_detail_map_card"),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, BorderLight),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                border = BorderStroke(1.2.dp, if (isRescueVehicleActive) Color(0xFF0284C7).copy(alpha = 0.5f) else BorderLight),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -402,51 +446,145 @@ fun RequestDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Default.Map, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(20.dp))
-                            Text(
-                                text = "Bản Đồ Vị Trí Sự Cố",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (isRescueVehicleActive) Color(0xFF0284C7).copy(alpha = 0.15f) else RescuePrimary.copy(alpha = 0.12f),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = if (isRescueVehicleActive) Icons.Default.DirectionsCar else Icons.Default.Map,
+                                        contentDescription = null,
+                                        tint = if (isRescueVehicleActive) Color(0xFF0284C7) else RescuePrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isRescueVehicleActive) "Theo Dõi Xe Cứu Hộ Trực Tiếp" else "Bản Đồ Vị Trí Sự Cố",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Định vị vệ tinh OpenStreetMap (Leaflet.js)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnSurfaceVariantLight,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = RescuePrimary.copy(alpha = 0.12f)
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isRescueVehicleActive) Color(0xFFE0F2FE) else RescuePrimary.copy(alpha = 0.12f)
                         ) {
                             Text(
-                                text = "${String.format(Locale.US, "%.4f, %.4f", request.latitude, request.longitude)}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = RescuePrimary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                text = if (isRescueVehicleActive) "LIVE GPS" else "${String.format(Locale.US, "%.4f, %.4f", request.latitude, request.longitude)}",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (isRescueVehicleActive) Color(0xFF0284C7) else RescuePrimary,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
                     }
 
-                    val detailMarker = remember(request.id, request.latitude, request.longitude) {
-                        listOf(
+                    // Live Telemetry Banner if Rescue Vehicle is Active
+                    if (isRescueVehicleActive) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF0F9FF),
+                            border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("🚚", fontSize = 18.sp)
+                                    Column {
+                                        Text(
+                                            text = "KTV: ${request.staffName ?: "Nguyễn Văn Toàn"} (Xe 29C-888.12)",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF0369A1)
+                                        )
+                                        Text(
+                                            text = "$vehicleStatusDesc • Cách: $vehicleDistanceStr (ETA: $vehicleEtaStr)",
+                                            fontSize = 10.5.sp,
+                                            color = Color(0xFF0284C7)
+                                        )
+                                    }
+                                }
+
+                                if (onSimulateRescueFlow != null && request.status != AppConfig.RequestStatus.COMPLETED) {
+                                    OutlinedButton(
+                                        onClick = { onSimulateRescueFlow(request.id) },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.height(30.dp)
+                                    ) {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF0284C7))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("Mô phỏng", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Interactive Markers List for Leaflet
+                    val detailMarkers = remember(request.id, request.status, request.latitude, request.longitude, techVehicleLat, techVehicleLng) {
+                        val list = mutableListOf<LeafletMapMarker>()
+                        // Marker 1: Vị trí người dùng gặp sự cố
+                        list.add(
                             LeafletMapMarker(
-                                id = request.id,
-                                title = "${request.issueType} • ${request.userName}",
-                                snippet = request.address,
-                                latitude = request.latitude,
-                                longitude = request.longitude,
+                                id = "incident_${request.id}",
+                                title = "Vị trí xe bạn (${request.issueType})",
+                                snippet = "${request.userName} • ${request.address}",
+                                latitude = baseLat,
+                                longitude = baseLng,
                                 type = "REQUEST",
                                 status = request.status
                             )
                         )
+                        // Marker 2: Vị trí xe cứu hộ đang di chuyển tới
+                        if (isRescueVehicleActive) {
+                            list.add(
+                                LeafletMapMarker(
+                                    id = "tech_vehicle_${request.id}",
+                                    title = "Xe Cứu Hộ: ${request.staffName ?: "KTV Cứu Hộ"}",
+                                    snippet = "Biển số: 29C-888.12 • Cách $vehicleDistanceStr • ETA: $vehicleEtaStr",
+                                    latitude = techVehicleLat,
+                                    longitude = techVehicleLng,
+                                    type = "TECHNICIAN",
+                                    status = request.status
+                                )
+                            )
+                        }
+                        list
                     }
 
                     LeafletMapView(
-                        centerLat = request.latitude,
-                        centerLng = request.longitude,
-                        centerAddress = request.address,
+                        centerLat = if (isRescueVehicleActive) techVehicleLat else baseLat,
+                        centerLng = if (isRescueVehicleActive) techVehicleLng else baseLng,
+                        centerAddress = if (isRescueVehicleActive) "Xe cứu hộ đang tới • $vehicleDistanceStr" else request.address,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
-                        markers = detailMarker,
+                            .height(230.dp),
+                        markers = detailMarkers,
+                        routeDestinationLat = if (isRescueVehicleActive) baseLat else null,
+                        routeDestinationLng = if (isRescueVehicleActive) baseLng else null,
+                        routeDestinationLabel = if (isRescueVehicleActive) "Điểm đến cứu hộ: ${request.address}" else null,
                         onNavigateClick = { lat, lng, label ->
                             if (onNavigateToCoordinates != null) {
                                 onNavigateToCoordinates(lat, lng, label)
@@ -596,6 +734,26 @@ fun RequestDetailScreen(
                                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = RescuePrimary)
                                 ) {
                                     Icon(Icons.Default.Chat, contentDescription = "Nhắn tin", tint = Color.White)
+                                }
+                            }
+                        }
+
+                        if (!request.emergencyContactPhone.isNullOrBlank()) {
+                            HorizontalDivider(color = BorderLight.copy(alpha = 0.6f))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Liên hệ khẩn cấp (ICE)", fontSize = 11.sp, color = AlertRed, fontWeight = FontWeight.Bold)
+                                    Text("${request.emergencyContact ?: "Người thân"}: ${request.emergencyContactPhone}", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                }
+                                OutlinedIconButton(
+                                    onClick = { onCallPhone(request.emergencyContactPhone) },
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Icon(Icons.Default.PhoneCallback, contentDescription = "Gọi người thân ICE", tint = AlertRed, modifier = Modifier.size(16.dp))
                                 }
                             }
                         }

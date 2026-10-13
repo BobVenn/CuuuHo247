@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.config.AppConfig
 import com.example.data.model.RescueRequest
+import com.example.data.model.SavedVehicle
+import com.example.data.model.ServiceAvailabilityItem
 import com.example.data.model.UserProfile
 import android.content.Intent
 import android.net.Uri
@@ -38,6 +40,8 @@ import com.example.ui.components.EmergencyHazardStrobeDialog
 import com.example.ui.components.LeafletMapMarker
 import com.example.ui.components.LeafletMapView
 import com.example.ui.components.RealtimeStatusDashboard
+import com.example.ui.components.ServiceAvailabilityDashboard
+import com.example.ui.components.UserProfileEmergencyManagerComponent
 import com.example.ui.theme.*
 import com.example.util.UserLocationInfo
 import java.text.SimpleDateFormat
@@ -69,6 +73,26 @@ fun HomeScreen(
     onToggleRealtimeTracking: () -> Unit = {},
     activeRequest: RescueRequest?,
     recentRequests: List<RescueRequest>,
+    serviceAvailability: List<ServiceAvailabilityItem> = emptyList(),
+    isServicesLoading: Boolean = false,
+    onRefreshServices: () -> Unit = {},
+    onToggleServiceAvailability: ((serviceId: String, isAvailable: Boolean) -> Unit)? = null,
+    savedVehicles: List<SavedVehicle> = emptyList(),
+    onUpdateEmergencyProfile: ((
+        displayName: String,
+        phone: String,
+        vehicleType: String,
+        vehicleName: String,
+        licensePlate: String,
+        emergencyContactName: String,
+        emergencyContactPhone: String,
+        emergencyRelationship: String,
+        bloodType: String,
+        emergencyNotes: String,
+        homeAddress: String
+    ) -> Unit)? = null,
+    onAddSavedVehicle: ((name: String, vType: String, plate: String, inspection: String, insurance: String) -> Unit)? = null,
+    onRemoveSavedVehicle: ((String) -> Unit)? = null,
     onRefreshLocation: () -> Unit,
     onEmergencySosCall: () -> Unit,
     onCreateRequest: (issueType: String, description: String, vehicleType: String, licensePlate: String, imageUrl: String?) -> Unit,
@@ -76,6 +100,7 @@ fun HomeScreen(
     onNavigateToHistory: () -> Unit,
     onNavigateToReports: () -> Unit,
     onShareLocation: () -> Unit,
+    onNavigateToGoogleMapsFinder: () -> Unit = {},
     onUpdateStatus: ((requestId: String, status: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -469,6 +494,22 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
+        // HỒ SƠ CỨU HỘ & QUẢN LÝ PHƯƠNG TIỆN (TIẾP CẬN NHANH < 15S)
+        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            UserProfileEmergencyManagerComponent(
+                userProfile = userProfile,
+                savedVehicles = savedVehicles,
+                onUpdateEmergencyProfile = { name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, addr ->
+                    onUpdateEmergencyProfile?.invoke(name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, addr)
+                },
+                onAddSavedVehicle = onAddSavedVehicle,
+                onRemoveSavedVehicle = onRemoveSavedVehicle,
+                isInitiallyExpanded = false
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         // LOCATION & GPS TỌA ĐỘ MINI CARD (Gọn gàng, tinh tế, chia nhóm rõ ràng)
         Card(
             modifier = Modifier
@@ -628,6 +669,13 @@ fun HomeScreen(
             border = BorderStroke(1.dp, BorderLight),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
+            val isCurrentRescueActive = activeRequest != null && activeRequest.status in listOf(
+                AppConfig.RequestStatus.ACCEPTED,
+                AppConfig.RequestStatus.EN_ROUTE,
+                AppConfig.RequestStatus.ARRIVED,
+                AppConfig.RequestStatus.IN_PROGRESS
+            )
+
             Column(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -672,58 +720,207 @@ fun HomeScreen(
 
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = CategoryGreenBg
+                        color = if (isCurrentRescueActive) Color(0xFFE0F2FE) else CategoryGreenBg
                     ) {
                         Text(
-                            text = "3 xe trực gần bạn",
+                            text = if (isCurrentRescueActive) "🚚 Xe cứu hộ đang tới" else "3 xe trực gần bạn",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = SafeGreen,
+                            color = if (isCurrentRescueActive) Color(0xFF0284C7) else SafeGreen,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
 
-                val nearbyPatrols = remember(currentLocation.latitude, currentLocation.longitude) {
-                    val lat = if (currentLocation.latitude != 0.0) currentLocation.latitude else 21.0285
-                    val lng = if (currentLocation.longitude != 0.0) currentLocation.longitude else 105.8542
-                    listOf(
-                        LeafletMapMarker(
-                            id = "patrol_1",
-                            title = "Đội Cứu Hộ 24/7 (Xe Sàn Trượt)",
-                            snippet = "Cách bạn 1.2 km • Túc trực sẵn sàng",
-                            latitude = lat + 0.0072,
-                            longitude = lng + 0.0061,
-                            type = "PATROL"
-                        ),
-                        LeafletMapMarker(
-                            id = "patrol_2",
-                            title = "Xe Cứu Hộ Kích Bình & Vá Lốp",
-                            snippet = "Cách bạn 1.8 km • Túc trực sẵn sàng",
-                            latitude = lat - 0.0068,
-                            longitude = lng - 0.0054,
-                            type = "PATROL"
-                        ),
-                        LeafletMapMarker(
-                            id = "patrol_3",
-                            title = "Trạm Cẩu Kéo Lưu Động Gara",
-                            snippet = "Cách bạn 2.4 km • Túc trực sẵn sàng",
-                            latitude = lat + 0.0112,
-                            longitude = lng - 0.0075,
-                            type = "PATROL"
+                // If active request exists, calculate incoming rescue vehicle location & route
+                val baseLat = if (currentLocation.latitude != 0.0) currentLocation.latitude else (activeRequest?.latitude?.takeIf { it != 0.0 } ?: 21.0285)
+                val baseLng = if (currentLocation.longitude != 0.0) currentLocation.longitude else (activeRequest?.longitude?.takeIf { it != 0.0 } ?: 105.8542)
+
+                val active = if (isCurrentRescueActive) activeRequest else null
+
+                val mapMarkers = remember(active?.id, active?.status, baseLat, baseLng) {
+                    if (active != null) {
+                        val reqLat = if (active.latitude != 0.0) active.latitude else baseLat
+                        val reqLng = if (active.longitude != 0.0) active.longitude else baseLng
+
+                        val (techLat, techLng, distStr, etaStr) = when (active.status) {
+                            AppConfig.RequestStatus.ACCEPTED -> listOf(reqLat + 0.0165, reqLng + 0.0135, "2.8 km", "15-20 phút")
+                            AppConfig.RequestStatus.EN_ROUTE -> listOf(reqLat + 0.0075, reqLng + 0.0062, "1.2 km", "8-12 phút")
+                            AppConfig.RequestStatus.ARRIVED -> listOf(reqLat + 0.0003, reqLng + 0.0003, "50 m", "Đã đến nơi")
+                            else -> listOf(reqLat + 0.0002, reqLng + 0.0002, "Tại chỗ", "Đang xử lý")
+                        }
+
+                        listOf(
+                            LeafletMapMarker(
+                                id = "home_incident_${active.id}",
+                                title = "Vị trí sự cố (${active.issueType})",
+                                snippet = active.address.ifBlank { "Vị trí của bạn" },
+                                latitude = reqLat,
+                                longitude = reqLng,
+                                type = "REQUEST",
+                                status = active.status
+                            ),
+                            LeafletMapMarker(
+                                id = "home_tech_${active.id}",
+                                title = "Xe Cứu Hộ: ${active.staffName ?: "KTV Cứu Hộ"}",
+                                snippet = "Biển số: 29C-888.12 • Cách $distStr • ETA: $etaStr",
+                                latitude = techLat as Double,
+                                longitude = techLng as Double,
+                                type = "TECHNICIAN",
+                                status = active.status
+                            )
                         )
-                    )
+                    } else {
+                        listOf(
+                            LeafletMapMarker(
+                                id = "patrol_1",
+                                title = "Đội Cứu Hộ 24/7 (Xe Sàn Trượt)",
+                                snippet = "Cách bạn 1.2 km • Túc trực sẵn sàng",
+                                latitude = baseLat + 0.0072,
+                                longitude = baseLng + 0.0061,
+                                type = "PATROL"
+                            ),
+                            LeafletMapMarker(
+                                id = "patrol_2",
+                                title = "Xe Cứu Hộ Kích Bình & Vá Lốp",
+                                snippet = "Cách bạn 1.8 km • Túc trực sẵn sàng",
+                                latitude = baseLat - 0.0068,
+                                longitude = baseLng - 0.0054,
+                                type = "PATROL"
+                            ),
+                            LeafletMapMarker(
+                                id = "patrol_3",
+                                title = "Trạm Cẩu Kéo Lưu Động Gara",
+                                snippet = "Cách bạn 2.4 km • Túc trực sẵn sàng",
+                                latitude = baseLat + 0.0112,
+                                longitude = baseLng - 0.0075,
+                                type = "PATROL"
+                            )
+                        )
+                    }
                 }
 
+                // Banner alert when incoming vehicle is en-route
+                if (active != null) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFF0F9FF),
+                        border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onRequestClick(active) }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("🚚", fontSize = 16.sp)
+                                Column {
+                                    Text(
+                                        text = "KTV: ${active.staffName ?: "Nguyễn Văn Toàn"} đang đến",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = Color(0xFF0369A1)
+                                    )
+                                    Text(
+                                        text = "Nhấn để xem lộ trình chi tiết & liên hệ KTV",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF0284C7)
+                                    )
+                                }
+                            }
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+
+                val destLat = if (active != null && active.latitude != 0.0) active.latitude else null
+                val destLng = if (active != null && active.longitude != 0.0) active.longitude else null
+
                 LeafletMapView(
-                    centerLat = currentLocation.latitude,
-                    centerLng = currentLocation.longitude,
+                    centerLat = currentLocation.latitude.takeIf { it != 0.0 } ?: baseLat,
+                    centerLng = currentLocation.longitude.takeIf { it != 0.0 } ?: baseLng,
                     centerAddress = currentLocation.address,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(210.dp),
-                    markers = nearbyPatrols
+                    markers = mapMarkers,
+                    routeDestinationLat = destLat,
+                    routeDestinationLng = destLng,
+                    routeDestinationLabel = activeRequest?.address ?: "Vị trí cứu hộ",
+                    onMarkerClick = { marker ->
+                        if (activeRequest != null && (marker.id.startsWith("home_") || marker.type == "TECHNICIAN" || marker.type == "REQUEST")) {
+                            onRequestClick(activeRequest)
+                        }
+                    }
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // GOOGLE MAPS DATA GROUNDING BANNER (gemini-3.5-flash + googleMaps tool)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .testTag("card_google_maps_grounding")
+                .clickable { onNavigateToGoogleMapsFinder() },
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, SafeGreen.copy(alpha = 0.4f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = SafeGreen.copy(alpha = 0.15f),
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Explore, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Dữ Liệu Google Maps Thực Tế", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = OnSurfaceLight)
+                            Surface(shape = RoundedCornerShape(4.dp), color = SafeGreen) {
+                                Text("AI MAPS", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                            }
+                        }
+                        Text("Tìm gara ô tô, tiệm vá lốp, bình ắc quy lân cận", fontSize = 11.5.sp, color = OnSurfaceVariantLight)
+                        Text("Tích hợp Gemini 3.5 Flash & googleMaps tool", fontSize = 10.sp, color = SafeGreen, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                FilledTonalButton(
+                    onClick = onNavigateToGoogleMapsFinder,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = SafeGreen.copy(alpha = 0.15f), contentColor = SafeGreen),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("Tra cứu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
             }
         }
 
@@ -744,6 +941,24 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(14.dp))
         }
+
+        // BẢNG ĐIỀU PHỐI DỊCH VỤ CỨU HỘ THỜI GIAN THỰC TỪ FIREBASE (CẨU KÉO, KÍCH BÌNH, VÁ LỐP...)
+        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            ServiceAvailabilityDashboard(
+                services = serviceAvailability,
+                isLoading = isServicesLoading,
+                onRefresh = onRefreshServices,
+                onRequestService = { item ->
+                    selectedIssueForDialog = item.issueType
+                    showCreateDialog = true
+                },
+                onToggleAvailability = onToggleServiceAvailability,
+                onCallEmergencyHotline = { phone -> quickDial(phone) },
+                isStaffUser = userProfile?.role == AppConfig.UserRole.STAFF
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
 
         // DỊCH VỤ CỨU HỘ: 8 ICON THEO LƯỚI 4 CỘT PHONG CÁCH GRAB/GOJEK
         Card(

@@ -24,6 +24,7 @@ import com.example.data.model.*
 import com.example.ui.components.CreateRequestDialog
 import com.example.ui.components.EmergencyHandbookDialog
 import com.example.ui.components.RescueOpenStreetMap
+import com.example.ui.components.ServiceAvailabilityDashboard
 import com.example.ui.theme.*
 import com.example.util.UserLocationInfo
 import java.text.NumberFormat
@@ -46,8 +47,13 @@ fun ServicesScreen(
     userProfile: UserProfile?,
     currentLocation: UserLocationInfo,
     savedVehicles: List<SavedVehicle> = emptyList(),
+    serviceAvailability: List<ServiceAvailabilityItem> = emptyList(),
+    isServicesLoading: Boolean = false,
+    onRefreshServices: () -> Unit = {},
+    onToggleServiceAvailability: ((serviceId: String, isAvailable: Boolean) -> Unit)? = null,
     onRefreshLocation: (() -> Unit)? = null,
     onCallPhone: (String) -> Unit,
+    onOpenGoogleMapsFinder: (() -> Unit)? = null,
     onSubmitRequest: (issueType: String, description: String, vehicleType: String, licensePlate: String, imageUrl: String?) -> Unit
 ) {
     var selectedMainTab by remember { mutableIntStateOf(0) } // 0: Bảng giá dịch vụ, 1: Cẩm nang & Đèn táp-lô
@@ -340,6 +346,73 @@ fun ServicesScreen(
                                 }
                             }
                         }
+                    }
+
+                    // 1.5 Google Maps Grounding AI Finder Banner (gemini-3.5-flash with googleMaps tool)
+                    if (onOpenGoogleMapsFinder != null) {
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenGoogleMapsFinder() }
+                                    .testTag("services_google_maps_grounding_card"),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = SafeGreen.copy(alpha = 0.08f)),
+                                border = BorderStroke(1.dp, SafeGreen.copy(alpha = 0.35f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Surface(shape = CircleShape, color = SafeGreen, modifier = Modifier.size(36.dp)) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(Icons.Default.Explore, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text("Tra Cứu Gara Trên Google Maps", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = OnSurfaceLight)
+                                                Surface(shape = RoundedCornerShape(4.dp), color = SafeGreen) {
+                                                    Text("AI MAPS", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                                }
+                                            }
+                                            Text("Sử dụng Gemini 3.5 Flash & googleMaps tool để định vị trạm cứu hộ gần bạn", fontSize = 11.sp, color = OnSurfaceVariantLight)
+                                        }
+                                    }
+
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SafeGreen)
+                                }
+                            }
+                        }
+                    }
+
+                    // 1.8 Realtime Service Availability Dashboard (Firebase Realtime Database)
+                    item {
+                        ServiceAvailabilityDashboard(
+                            services = serviceAvailability,
+                            isLoading = isServicesLoading,
+                            onRefresh = onRefreshServices,
+                            onRequestService = { item ->
+                                onSubmitRequest(
+                                    item.issueType,
+                                    "Yêu cầu cứu hộ khẩn cấp: ${item.name}",
+                                    userProfile?.vehicleType ?: "Ô tô 4-7 chỗ",
+                                    userProfile?.licensePlate ?: "",
+                                    null
+                                )
+                            },
+                            onToggleAvailability = onToggleServiceAvailability,
+                            onCallEmergencyHotline = { phone -> onCallPhone(phone) },
+                            isStaffUser = userProfile?.role == AppConfig.UserRole.STAFF
+                        )
                     }
 
                     // 2. OpenStreetMap Interactive Card with Quick Action Buttons
