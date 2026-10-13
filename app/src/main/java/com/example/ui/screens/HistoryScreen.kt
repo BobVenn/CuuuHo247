@@ -72,7 +72,7 @@ fun HistoryScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${requests.size} yêu cầu được đồng bộ từ Firebase Realtime",
+                            text = "${requests.size} yêu cầu cứu hộ đã thực hiện",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -202,7 +202,7 @@ fun HistoryScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Toàn bộ hồ sơ cứu hộ quá khứ bao gồm Ngày giờ, Dịch vụ, Chi phí thực tế và Nhận xét chẩn đoán từ Kỹ thuật viên sẽ được lưu trữ tự động trên Firebase Realtime Database.",
+                            text = "Toàn bộ hồ sơ cứu hộ trước đây bao gồm Ngày giờ, Loại dịch vụ, Chi phí thực tế và Nhận xét chẩn đoán từ Kỹ thuật viên sẽ được lưu trữ đầy đủ tại đây.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -219,7 +219,7 @@ fun HistoryScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Tạo Yêu Cầu Cứu Hộ Mẫu (Firebase)")
+                                Text("Tạo Yêu Cầu Mẫu Trải Nghiệm")
                             }
                         }
                     }

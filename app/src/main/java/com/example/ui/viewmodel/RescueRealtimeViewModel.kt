@@ -635,7 +635,7 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
             }
             try {
                 firebaseManager.updateTechnicianFeedback(requestId, feedback)
-                _statusMessage.value = "Đã cập nhật phản hồi kỹ thuật viên trên Firebase"
+                _statusMessage.value = "Đã cập nhật phản hồi của kỹ thuật viên"
             } catch (e: Exception) {
                 Log.w(TAG, "updateTechnicianFeedback notice: ${e.message}")
             }
@@ -831,7 +831,7 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
             _userRequests.value = listOf(sampleRequest) + _userRequests.value.filter { it.id != reqId }
             _allRequests.value = listOf(sampleRequest) + _allRequests.value.filter { it.id != reqId }
             _isLoading.value = false
-            _statusMessage.value = "Đã lưu yêu cầu cứu hộ mẫu vào Firebase!"
+            _statusMessage.value = "Đã tạo yêu cầu cứu hộ mẫu thành công!"
 
             try {
                 firebaseManager.createRescueRequest(sampleRequest)
@@ -1039,7 +1039,7 @@ class RescueRealtimeViewModel(application: Application) : AndroidViewModel(appli
             _isServicesLoading.value = true
             try {
                 firebaseManager.seedDefaultServicesIfEmpty()
-                _statusMessage.value = "Đã làm mới dữ liệu sẵn sàng cứu hộ từ Firebase"
+                _statusMessage.value = "Đã làm mới dữ liệu sẵn sàng cứu hộ"
             } catch (e: Exception) {
                 _statusMessage.value = "Không thể làm mới: ${e.message}"
             } finally {

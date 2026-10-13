@@ -218,7 +218,7 @@ fun ProfileScreen(
                                         ) {
                                             Box(modifier = Modifier.size(6.dp).background(SafeGreen, CircleShape))
                                             Text(
-                                                text = "Firebase Auth Active",
+                                                text = "Đã xác thực",
                                                 color = SafeGreen,
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold
@@ -250,7 +250,7 @@ fun ProfileScreen(
                         }
                     }
 
-                    // UID Badge với nút Copy
+                    // Mã định danh tài khoản với nút Copy
                     val displayUid = currentUser?.uid ?: userProfile?.uid ?: "chua_co_uid"
                     Surface(
                         shape = RoundedCornerShape(10.dp),
@@ -259,7 +259,7 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .clickable {
                                 clipboardManager.setText(AnnotatedString(displayUid))
-                                Toast.makeText(context, "Đã sao chép Firebase UID: $displayUid", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Đã sao chép mã tài khoản: $displayUid", Toast.LENGTH_SHORT).show()
                             }
                     ) {
                         Row(
@@ -273,7 +273,7 @@ fun ProfileScreen(
                             ) {
                                 Icon(Icons.Default.Fingerprint, contentDescription = null, tint = OnSurfaceVariantLight, modifier = Modifier.size(16.dp))
                                 Text(
-                                    text = "UID: ${displayUid.take(16)}...",
+                                    text = "Mã tài khoản: ${displayUid.take(16)}...",
                                     fontSize = 11.sp,
                                     color = OnSurfaceVariantLight,
                                     fontWeight = FontWeight.Medium
@@ -977,7 +977,7 @@ fun ProfileScreen(
 
                     ListItem(
                         headlineContent = { Text("Đánh giá của tôi (${myRatings.size})", fontWeight = FontWeight.SemiBold) },
-                        supportingContent = { Text("Các đánh giá chất lượng lưu trên Firebase") },
+                        supportingContent = { Text("Các đánh giá chất lượng dịch vụ của bạn") },
                         leadingContent = { Icon(Icons.Default.Star, contentDescription = null, tint = EmergencyGold) },
                         trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                         modifier = Modifier.clickable { showRatingsSheet = true }
@@ -1051,7 +1051,7 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "Thông tin này được lưu an toàn trên Firebase Auth để điều phối xe cứu hộ và kỹ thuật viên nhanh nhất khi bạn gặp sự cố trên đường.",
+                        text = "Thông tin này được bảo mật an toàn để điều phối xe cứu hộ và kỹ thuật viên nhanh nhất khi bạn gặp sự cố trên đường.",
                         fontSize = 11.5.sp,
                         color = OnSurfaceVariantLight
                     )
@@ -1167,11 +1167,11 @@ fun ProfileScreen(
                         } else {
                             onUpdateProfile(name, phone, vType, vName, plate, null)
                         }
-                        Toast.makeText(context, "Đã lưu hồ sơ điều phối khẩn cấp lên Firebase!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Đã lưu hồ sơ cứu hộ khẩn cấp thành công!", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
                 ) {
-                    Text("LƯU LÊN FIREBASE")
+                    Text("LƯU THÔNG TIN")
                 }
             },
             dismissButton = {

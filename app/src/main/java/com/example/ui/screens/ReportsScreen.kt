@@ -45,7 +45,7 @@ fun ReportsScreen(
                 title = {
                     Column {
                         Text("Báo Cáo & Phản Hồi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Node 'reports' trên Firebase", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Kênh tiếp nhận ý kiến khách hàng 24/7", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 navigationIcon = {
@@ -98,7 +98,7 @@ fun ReportsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Mọi ý kiến đóng góp hoặc phản ánh dịch vụ của bạn sẽ được ban quản trị ghi nhận và xử lý trực tiếp trên Firebase.",
+                        text = "Mọi ý kiến đóng góp hoặc phản ánh dịch vụ của bạn sẽ được ban quản trị ghi nhận và hỗ trợ xử lý kịp thời.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

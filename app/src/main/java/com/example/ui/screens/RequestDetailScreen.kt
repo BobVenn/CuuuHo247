@@ -834,7 +834,7 @@ fun RequestDetailScreen(
                                 color = Color(0xFF166534)
                             )
                             Text(
-                                text = "Lưu trữ Firebase Realtime",
+                                text = "Hồ sơ nghiệm thu điện tử",
                                 fontSize = 10.sp,
                                 color = Color(0xFF15803D)
                             )
@@ -1068,12 +1068,12 @@ fun RequestDetailScreen(
                     OutlinedTextField(
                         value = feedbackInput,
                         onValueChange = { feedbackInput = it },
-                        label = { Text("Nhận xét & chẩn đoán KTV (Lưu Firebase)") },
+                        label = { Text("Nhận xét & chẩn đoán kỹ thuật viên") },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3
                     )
                     Text(
-                        text = "💡 Hệ thống sẽ tự động lưu chẩn đoán vào hồ sơ Firebase và tạo mã VietQR Napas để khách hàng thanh toán.",
+                        text = "💡 Hệ thống sẽ tự động lưu chẩn đoán vào hồ sơ cứu hộ và tạo mã VietQR Napas để khách hàng thanh toán.",
                         fontSize = 11.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

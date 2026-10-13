@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -32,8 +34,6 @@ import com.example.data.model.RescueRequest
 import com.example.data.model.SavedVehicle
 import com.example.data.model.ServiceAvailabilityItem
 import com.example.data.model.UserProfile
-import android.content.Intent
-import android.net.Uri
 import com.example.ui.components.CreateRequestDialog
 import com.example.ui.components.EmergencyHandbookDialog
 import com.example.ui.components.EmergencyHazardStrobeDialog
@@ -41,7 +41,6 @@ import com.example.ui.components.LeafletMapMarker
 import com.example.ui.components.LeafletMapView
 import com.example.ui.components.RealtimeStatusDashboard
 import com.example.ui.components.ServiceAvailabilityDashboard
-import com.example.ui.components.UserProfileEmergencyManagerComponent
 import com.example.ui.theme.*
 import com.example.util.UserLocationInfo
 import java.text.SimpleDateFormat
@@ -112,7 +111,7 @@ fun HomeScreen(
 
     val dateFormat = remember { SimpleDateFormat("HH:mm - dd/MM", Locale("vi", "VN")) }
 
-    // Tính năng quay số nhanh (Quick-Dial) trực tiếp tới số hotline cài sẵn 0898212031
+    // Tính năng quay số nhanh (Quick-Dial) trực tiếp tới số hotline cứu hộ
     fun quickDial(phoneNumber: String = AppConfig.DEFAULT_RESCUE_HOTLINE) {
         try {
             val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber")).apply {
@@ -128,7 +127,7 @@ fun HomeScreen(
     val infiniteTransition = rememberInfiniteTransition(label = "sos_pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.08f,
+        targetValue = 1.07f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -136,18 +135,9 @@ fun HomeScreen(
         label = "pulse_scale"
     )
 
-    // Danh mục dịch vụ chuẩn phong cách Grab/Gojek: icon hóa, ngắn gọn, có giá nổi bật
+    // 8 DỊCH VỤ CỨU HỘ CHÍNH - BỐ CỤC LƯỚI GỌN GÀNG HIỂN THỊ NGAY KHI MỞ APP
     val quickServices = remember {
         listOf(
-            QuickServiceItem(
-                id = "MOTO",
-                title = "Xe máy",
-                priceDisplay = "Từ 70k",
-                icon = Icons.Default.TwoWheeler,
-                bgColor = CategoryOrangeBg,
-                tintColor = CategoryOrangeTint,
-                issueType = "Hỏng xe"
-            ),
             QuickServiceItem(
                 id = "CAR",
                 title = "Ô tô",
@@ -155,6 +145,15 @@ fun HomeScreen(
                 icon = Icons.Default.DirectionsCar,
                 bgColor = CategoryBlueBg,
                 tintColor = CategoryBlueTint,
+                issueType = "Hỏng xe"
+            ),
+            QuickServiceItem(
+                id = "MOTO",
+                title = "Xe máy",
+                priceDisplay = "Từ 70k",
+                icon = Icons.Default.TwoWheeler,
+                bgColor = CategoryOrangeBg,
+                tintColor = CategoryOrangeTint,
                 issueType = "Hỏng xe"
             ),
             QuickServiceItem(
@@ -195,7 +194,7 @@ fun HomeScreen(
             ),
             QuickServiceItem(
                 id = "TOW",
-                title = "Cẩu kéo xe",
+                title = "Cẩu kéo",
                 priceDisplay = "Từ 450k",
                 icon = Icons.Default.LocalShipping,
                 bgColor = CategoryBlueBg,
@@ -204,7 +203,7 @@ fun HomeScreen(
             ),
             QuickServiceItem(
                 id = "REPAIR",
-                title = "Sửa lưu động",
+                title = "Sửa nhanh",
                 priceDisplay = "Từ 150k",
                 icon = Icons.Default.Build,
                 bgColor = CategoryOrangeBg,
@@ -219,9 +218,11 @@ fun HomeScreen(
             .fillMaxSize()
             .background(SurfaceLight)
             .verticalScroll(rememberScrollState())
-            .padding(bottom = 95.dp)
+            .padding(bottom = 90.dp)
     ) {
-        // TOP HEADER: Nền trắng tinh tế, logo + lời chào + nút gọi hotline nhỏ gọn
+        // =====================================================================
+        // 1. COMPACT TOP HEADER & INTEGRATED ADDRESS PILL (CHỈ ~70DP CAO)
+        // =====================================================================
         Surface(
             color = Color.White,
             shadowElevation = 1.dp,
@@ -230,30 +231,30 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // Top Row: Greetings & Emergency Hotline Chip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Profile & Greetings
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
                             shape = CircleShape,
                             color = RescuePrimary.copy(alpha = 0.12f),
-                            modifier = Modifier.size(42.dp)
+                            modifier = Modifier.size(34.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = null,
                                     tint = RescuePrimary,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -262,60 +263,158 @@ fun HomeScreen(
                             Text(
                                 text = "Xin chào 👋",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = OnSurfaceVariantLight
+                                color = OnSurfaceVariantLight,
+                                fontSize = 10.sp
                             )
                             Text(
                                 text = if (userProfile?.displayName.isNullOrBlank()) "Khách hàng" else userProfile!!.displayName,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = OnSurfaceLight
+                                color = OnSurfaceLight,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    // Hotline Dialer Quick Chip (Quick-Dial 0898212031)
+                    // 1-Tap Hotline Chip
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(18.dp),
                         color = AlertRedLight,
-                        border = BorderStroke(1.dp, AlertRed.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, AlertRed.copy(alpha = 0.35f)),
                         modifier = Modifier
                             .clickable { quickDial(AppConfig.DEFAULT_RESCUE_HOTLINE) }
                             .testTag("btn_top_hotline")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PhoneInTalk,
                                 contentDescription = "Gọi cứu hộ",
                                 tint = AlertRed,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "Hotline: ${AppConfig.RESCUE_HOTLINE_DISPLAY}",
-                                fontSize = 11.5.sp,
+                                text = AppConfig.RESCUE_HOTLINE_DISPLAY,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 color = AlertRed
                             )
                         }
                     }
                 }
+
+                // Compact Location Pill (Tối giản diện tích, hiển thị trực quan)
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFF8FAFC),
+                    border = BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("location_info_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = SafeGreen,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = if (isLocating) "Đang định vị..." else currentLocation.address,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = OnSurfaceLight,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (!hasFineLocationPermission) {
+                                TextButton(
+                                    onClick = onRequestLocationPermission,
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(24.dp)
+                                ) {
+                                    Text("Bật GPS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = AlertRed)
+                                }
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.clickable { onToggleRealtimeTracking() }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isRealtimeTrackingActive) SafeGreen else EmergencyGold)
+                                    )
+                                    Text(
+                                        text = if (isRealtimeTrackingActive) "Live" else "Sẵn sàng",
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isRealtimeTrackingActive) SafeGreen else OnSurfaceVariantLight
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = onRefreshLocation,
+                                modifier = Modifier.size(22.dp)
+                            ) {
+                                if (isLocating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(11.dp),
+                                        color = RescuePrimary,
+                                        strokeWidth = 1.5.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = "Làm mới vị trí",
+                                        tint = OnSurfaceVariantLight,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // HERO SOS EMERGENCY BANNER (Phong cách Grab / Gojek: Thẻ bo góc hiện đại, cực kỳ nổi bật, không chữ thừa)
+        // =====================================================================
+        // 2. ULTRA-COMPACT HERO EMERGENCY BANNER (TINH GỌN, CAO CHỈ ~90DP)
+        // =====================================================================
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 14.dp)
                 .testTag("banner_emergency_sos"),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = RescuePrimary),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -329,7 +428,7 @@ fun HomeScreen(
                             )
                         )
                     )
-                    .padding(16.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -338,185 +437,88 @@ fun HomeScreen(
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(4.dp),
                                 color = Color.White.copy(alpha = 0.25f)
                             ) {
                                 Text(
-                                    text = "KHẨN CẤP 24/7",
+                                    text = "CỨU HỘ 24/7",
                                     color = Color.White,
-                                    fontSize = 10.sp,
+                                    fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                                 )
                             }
+                            Text(
+                                text = "Có mặt sau 15p",
+                                color = Color.White.copy(alpha = 0.95f),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
 
                         Text(
                             text = "Gặp sự cố trên đường?",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 14.sp
                         )
 
                         Text(
-                            text = "Kỹ thuật viên có mặt sau 15 phút",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "KTV túc trực toàn quốc",
+                            fontSize = 10.5.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
                     }
 
-                    // Quick-Dial Call Button
+                    // Hotline Call Button with pulsating scale animation
                     Button(
                         onClick = { quickDial(AppConfig.DEFAULT_RESCUE_HOTLINE) },
                         modifier = Modifier
                             .scale(pulseScale)
                             .testTag("btn_hero_sos_call"),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White,
                             contentColor = AlertRed
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp)
                     ) {
                         Icon(
                             Icons.Default.PhoneInTalk,
                             contentDescription = null,
                             tint = AlertRed,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "0898 212 031",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 13.sp,
-                            color = AlertRed
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // QUICK-DIAL EMERGENCY SERVICE HOTLINE (0898 212 031)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable { quickDial(AppConfig.DEFAULT_RESCUE_HOTLINE) }
-                .testTag("card_quick_dial_hotline"),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
-            border = BorderStroke(1.5.dp, Color(0xFFFCA5A5)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = AlertRed,
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.PhoneForwarded,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "QUICK-DIAL HOTLINE 24/7",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 11.sp,
-                                color = Color(0xFF991B1B)
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = AlertRed
-                            ) {
-                                Text(
-                                    text = "1-CHẠM",
-                                    color = Color.White,
-                                    fontSize = 8.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = AppConfig.RESCUE_HOTLINE_DISPLAY,
                             fontWeight = FontWeight.Black,
-                            fontSize = 18.sp,
+                            fontSize = 11.5.sp,
                             color = AlertRed
                         )
-                        Text(
-                            text = "Bấm gọi ngay lập tức tới đội ứng trực cứu hộ",
-                            fontSize = 10.5.sp,
-                            color = Color(0xFFB91C1C)
-                        )
                     }
-                }
-
-                Button(
-                    onClick = { quickDial(AppConfig.DEFAULT_RESCUE_HOTLINE) },
-                    colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    modifier = Modifier.testTag("btn_quick_dial_now")
-                ) {
-                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("GỌI NGAY", fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // HỒ SƠ CỨU HỘ & QUẢN LÝ PHƯƠNG TIỆN (TIẾP CẬN NHANH < 15S)
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            UserProfileEmergencyManagerComponent(
-                userProfile = userProfile,
-                savedVehicles = savedVehicles,
-                onUpdateEmergencyProfile = { name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, addr ->
-                    onUpdateEmergencyProfile?.invoke(name, phone, vType, vName, plate, iceName, icePhone, iceRel, blood, notes, addr)
-                },
-                onAddSavedVehicle = onAddSavedVehicle,
-                onRemoveSavedVehicle = onRemoveSavedVehicle,
-                isInitiallyExpanded = false
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // LOCATION & GPS TỌA ĐỘ MINI CARD (Gọn gàng, tinh tế, chia nhóm rõ ràng)
+        // =====================================================================
+        // 3. ESSENTIAL RESCUE SERVICES GRID (HIỂN THỊ 100% TRÊN MÀN HÌNH ĐẦU TIÊN)
+        // =====================================================================
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .testTag("location_info_card"),
-            shape = RoundedCornerShape(18.dp),
+                .padding(horizontal = 14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             border = BorderStroke(1.dp, BorderLight),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -524,150 +526,351 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Address Row
+                // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = CategoryGreenBg,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = SafeGreen,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.CarRepair, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(17.dp))
                         Text(
-                            text = if (isLocating) "Đang định vị vị trí..." else currentLocation.address,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            text = "DỊCH VỤ CỨU HỘ KHẨN CẤP",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Black,
                             color = OnSurfaceLight,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontSize = 13.5.sp
                         )
                     }
-
-                    IconButton(
-                        onClick = onRefreshLocation,
-                        modifier = Modifier.size(28.dp)
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = CategoryGreenBg
                     ) {
-                        if (isLocating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = RescuePrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "Làm mới",
-                                tint = OnSurfaceVariantLight,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Text(
+                            text = "Giá niêm yết",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SafeGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.5.sp,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                        )
+                    }
+                }
+
+                // 2 Hàng x 4 Cột: Gọn gàng, vừa vặn trên mọi kích cỡ màn hình
+                quickServices.chunked(4).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        rowItems.forEach { item ->
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        selectedIssueForDialog = item.issueType
+                                        showCreateDialog = true
+                                    }
+                                    .testTag("quick_service_${item.id}"),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = item.bgColor,
+                                    modifier = Modifier.size(46.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = item.title,
+                                            tint = item.tintColor,
+                                            modifier = Modifier.size(23.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = item.title,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurfaceLight,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1
+                                )
+
+                                Text(
+                                    text = item.priceDisplay,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RescuePrimary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
 
-                // Coordinates & Accuracy Badges
+                // Quick Request & Share GPS Action Strip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Button(
+                        onClick = {
+                            selectedIssueForDialog = null
+                            showCreateDialog = true
+                        },
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(36.dp)
+                            .testTag("btn_open_create_request"),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFF1F5F9)
-                        ) {
-                            Text(
-                                text = "${String.format(Locale.US, "%.5f", currentLocation.latitude)}, ${String.format(Locale.US, "%.5f", currentLocation.longitude)}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurfaceLight,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = CategoryGreenBg
-                        ) {
-                            Text(
-                                text = currentLocation.formattedAccuracy,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SafeGreen,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                        Icon(Icons.Default.AddLocationAlt, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Đặt Cứu Hộ Ngay", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Realtime status or permission button
-                    if (!hasFineLocationPermission) {
-                        TextButton(
-                            onClick = onRequestLocationPermission,
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            Icon(Icons.Default.GpsFixed, contentDescription = null, tint = AlertRed, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Bật GPS chính xác", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AlertRed)
-                        }
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.clickable { onToggleRealtimeTracking() }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isRealtimeTrackingActive) SafeGreen else EmergencyGold)
-                            )
-                            Text(
-                                text = if (isRealtimeTrackingActive) "Live GPS" else "GPS Sẵn sàng",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isRealtimeTrackingActive) SafeGreen else OnSurfaceVariantLight
-                            )
-                        }
+                    OutlinedButton(
+                        onClick = onShareLocation,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .testTag("btn_share_location"),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, BorderLight),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurfaceLight),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Chia Sẻ GPS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // BẢN ĐỒ CỨU HỘ TRỰC TIẾP (Leaflet.js & OpenStreetMap - 100% Free, Hiển thị trực quan)
+        // =====================================================================
+        // 4. TIẾN ĐỘ CỨU HỘ ĐANG DIỄN RA (NẾU CÓ ĐƠN HÀNG HOẠT ĐỘNG)
+        // =====================================================================
+        if (activeRequest != null) {
+            Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                RealtimeStatusDashboard(
+                    request = activeRequest,
+                    isEmbeddedCard = true,
+                    onOpenFullDetail = { onRequestClick(activeRequest) },
+                    onCallHotline = { phone -> quickDial(phone) },
+                    onCallTechnician = { phone -> quickDial(phone) },
+                    onOpenChat = { onRequestClick(activeRequest) },
+                    onSimulateStep = null
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        // =====================================================================
+        // 5. TIỆN ÍCH HỖ TRỢ DẠNG LƯỚI 2x2 (TIẾT KIỆM 65% DIỆN TÍCH CUỘN TRANG)
+        // =====================================================================
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Hàng 1: Tra cứu Gara & Bảng Giá Cẩm Nang
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Card 1: Tra cứu Gara lân cận
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onNavigateToGoogleMapsFinder() }
+                        .testTag("card_google_maps_grounding"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, SafeGreen.copy(alpha = 0.35f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = SafeGreen.copy(alpha = 0.15f),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Explore, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Text("Tìm Gara Gần", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = OnSurfaceLight)
+                        }
+                        Text(
+                            text = "Tra cứu gara & tiệm vá xe quanh bạn",
+                            fontSize = 10.sp,
+                            color = OnSurfaceVariantLight,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Card 2: Bảng giá & cẩm nang
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showHandbookDialog = true }
+                        .testTag("card_handbook_pricing_guide"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, EmergencyGold.copy(alpha = 0.4f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFFFEF3C7),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Text("Bảng Giá & Mẹo", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = OnSurfaceLight)
+                        }
+                        Text(
+                            text = "Giá chuẩn & mẹo nổ lốp, hết bình",
+                            fontSize = 10.sp,
+                            color = OnSurfaceVariantLight,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Hàng 2: Đèn chớp SOS Hazard & Xem Bản Đồ Xe Trực
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Card 3: Đèn chớp hazard SOS
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showStrobeDialog = true }
+                        .testTag("btn_open_emergency_strobe"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                    border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = AlertRed,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                                }
+                            }
+                            Text("Đèn Chớp Hazard", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = Color(0xFF991B1B))
+                        }
+                        Text(
+                            text = "Cảnh báo ban đêm & còi hú SOS",
+                            fontSize = 10.sp,
+                            color = Color(0xFFB91C1C),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Card 4: Tổng đài ứng trực 24/7
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { quickDial(AppConfig.DEFAULT_RESCUE_HOTLINE) },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                    border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = SafeGreen,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.SupportAgent, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Text("Tổng Đài 24/7", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = Color(0xFF166534))
+                        }
+                        Text(
+                            text = "Điều phối xe kéo & thợ máy nhanh",
+                            fontSize = 10.sp,
+                            color = Color(0xFF15803D),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // =====================================================================
+        // 6. BẢN ĐỒ CỨU HỘ TRỰC TIẾP (LEAFLET.JS - CHIỀU CAO 155DP TINH GỌN)
+        // =====================================================================
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 14.dp)
                 .testTag("home_live_rescue_map_card"),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             border = BorderStroke(1.dp, BorderLight),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             val isCurrentRescueActive = activeRequest != null && activeRequest.status in listOf(
                 AppConfig.RequestStatus.ACCEPTED,
@@ -677,8 +880,8 @@ fun HomeScreen(
             )
 
             Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -692,30 +895,23 @@ fun HomeScreen(
                         Surface(
                             shape = CircleShape,
                             color = RescuePrimary.copy(alpha = 0.15f),
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.Map,
                                     contentDescription = null,
                                     tint = RescuePrimary,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         }
-                        Column {
-                            Text(
-                                text = "Bản Đồ Cứu Hộ Trực Tiếp",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Định vị vệ tinh GPS & Xe trực 24/7",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurfaceVariantLight,
-                                fontSize = 11.sp
-                            )
-                        }
+                        Text(
+                            text = "Bản Đồ Xe Cứu Hộ Trực Tiếp",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.5.sp
+                        )
                     }
 
                     Surface(
@@ -723,19 +919,17 @@ fun HomeScreen(
                         color = if (isCurrentRescueActive) Color(0xFFE0F2FE) else CategoryGreenBg
                     ) {
                         Text(
-                            text = if (isCurrentRescueActive) "🚚 Xe cứu hộ đang tới" else "3 xe trực gần bạn",
-                            fontSize = 11.sp,
+                            text = if (isCurrentRescueActive) "🚚 Xe đang tới bạn" else "3 xe trực gần bạn",
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isCurrentRescueActive) Color(0xFF0284C7) else SafeGreen,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
 
-                // If active request exists, calculate incoming rescue vehicle location & route
                 val baseLat = if (currentLocation.latitude != 0.0) currentLocation.latitude else (activeRequest?.latitude?.takeIf { it != 0.0 } ?: 21.0285)
                 val baseLng = if (currentLocation.longitude != 0.0) currentLocation.longitude else (activeRequest?.longitude?.takeIf { it != 0.0 } ?: 105.8542)
-
                 val active = if (isCurrentRescueActive) activeRequest else null
 
                 val mapMarkers = remember(active?.id, active?.status, baseLat, baseLng) {
@@ -800,48 +994,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Banner alert when incoming vehicle is en-route
-                if (active != null) {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFF0F9FF),
-                        border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onRequestClick(active) }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("🚚", fontSize = 16.sp)
-                                Column {
-                                    Text(
-                                        text = "KTV: ${active.staffName ?: "Nguyễn Văn Toàn"} đang đến",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.5.sp,
-                                        color = Color(0xFF0369A1)
-                                    )
-                                    Text(
-                                        text = "Nhấn để xem lộ trình chi tiết & liên hệ KTV",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF0284C7)
-                                    )
-                                }
-                            }
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-
                 val destLat = if (active != null && active.latitude != 0.0) active.latitude else null
                 val destLng = if (active != null && active.longitude != 0.0) active.longitude else null
 
@@ -851,7 +1003,7 @@ fun HomeScreen(
                     centerAddress = currentLocation.address,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(210.dp),
+                        .height(155.dp),
                     markers = mapMarkers,
                     routeDestinationLat = destLat,
                     routeDestinationLng = destLng,
@@ -865,383 +1017,16 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // GOOGLE MAPS DATA GROUNDING BANNER (gemini-3.5-flash + googleMaps tool)
+        // =====================================================================
+        // 7. YÊU CẦU CỨU HỘ GẦN ĐÂY
+        // =====================================================================
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .testTag("card_google_maps_grounding")
-                .clickable { onNavigateToGoogleMapsFinder() },
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, SafeGreen.copy(alpha = 0.4f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = SafeGreen.copy(alpha = 0.15f),
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Explore, contentDescription = null, tint = SafeGreen, modifier = Modifier.size(24.dp))
-                        }
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Dữ Liệu Google Maps Thực Tế", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = OnSurfaceLight)
-                            Surface(shape = RoundedCornerShape(4.dp), color = SafeGreen) {
-                                Text("AI MAPS", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
-                            }
-                        }
-                        Text("Tìm gara ô tô, tiệm vá lốp, bình ắc quy lân cận", fontSize = 11.5.sp, color = OnSurfaceVariantLight)
-                        Text("Tích hợp Gemini 3.5 Flash & googleMaps tool", fontSize = 10.sp, color = SafeGreen, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                FilledTonalButton(
-                    onClick = onNavigateToGoogleMapsFinder,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = SafeGreen.copy(alpha = 0.15f), contentColor = SafeGreen),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text("Tra cứu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // REALTIME EMERGENCY STATUS DASHBOARD (Firebase Realtime Database Live Observer)
-        if (activeRequest != null) {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                RealtimeStatusDashboard(
-                    request = activeRequest,
-                    isEmbeddedCard = true,
-                    onOpenFullDetail = { onRequestClick(activeRequest) },
-                    onCallHotline = { phone -> quickDial(phone) },
-                    onCallTechnician = { phone -> quickDial(phone) },
-                    onOpenChat = { onRequestClick(activeRequest) },
-                    onSimulateStep = null
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-
-        // BẢNG ĐIỀU PHỐI DỊCH VỤ CỨU HỘ THỜI GIAN THỰC TỪ FIREBASE (CẨU KÉO, KÍCH BÌNH, VÁ LỐP...)
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            ServiceAvailabilityDashboard(
-                services = serviceAvailability,
-                isLoading = isServicesLoading,
-                onRefresh = onRefreshServices,
-                onRequestService = { item ->
-                    selectedIssueForDialog = item.issueType
-                    showCreateDialog = true
-                },
-                onToggleAvailability = onToggleServiceAvailability,
-                onCallEmergencyHotline = { phone -> quickDial(phone) },
-                isStaffUser = userProfile?.role == AppConfig.UserRole.STAFF
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // DỊCH VỤ CỨU HỘ: 8 ICON THEO LƯỚI 4 CỘT PHONG CÁCH GRAB/GOJEK
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, BorderLight),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "DỊCH VỤ CỨU HỘ",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Black,
-                        color = OnSurfaceLight
-                    )
-                    Text(
-                        text = "Giá niêm yết",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SafeGreen,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // 2 hàng x 4 cột dịch vụ dạng icon + tên ngắn + giá nổi bật
-                quickServices.chunked(4).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        rowItems.forEach { item ->
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        selectedIssueForDialog = item.issueType
-                                        showCreateDialog = true
-                                    }
-                                    .testTag("quick_service_${item.id}"),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = item.bgColor,
-                                    modifier = Modifier.size(52.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = item.icon,
-                                            contentDescription = item.title,
-                                            tint = item.tintColor,
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                    }
-                                }
-
-                                Text(
-                                    text = item.title,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnSurfaceLight,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1
-                                )
-
-                                Text(
-                                    text = item.priceDisplay,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RescuePrimary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // BẢNG GIÁ NIÊM YẾT & CẨM NANG XỬ LÝ SỰ CỐ KHẨN CẤP (Tra cứu chuẩn & an toàn)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable { showHandbookDialog = true }
-                .testTag("card_handbook_pricing_guide"),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.2.dp, EmergencyGold.copy(alpha = 0.6f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFFFEF3C7),
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.MenuBook,
-                                contentDescription = null,
-                                tint = Color(0xFFB45309),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Bảng Giá & Cẩm Nang Sự Cố",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.5.sp,
-                                color = OnSurfaceLight
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = SafeGreen
-                            ) {
-                                Text(
-                                    text = "NIÊM YẾT",
-                                    color = Color.White,
-                                    fontSize = 8.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Vá lốp 120k • Kích bình 200k • Cẩu kéo • Cẩm nang nổ lốp cao tốc",
-                            fontSize = 11.sp,
-                            color = OnSurfaceVariantLight,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = EmergencyGold.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = "Xem",
-                        color = Color(0xFFB45309),
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // NÚT HÀNH ĐỘNG NHANH: GỬI YÊU CẦU & CHIA SẺ VỊ TRÍ
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Button(
-                onClick = {
-                    selectedIssueForDialog = null
-                    showCreateDialog = true
-                },
-                modifier = Modifier
-                    .weight(1.3f)
-                    .height(48.dp)
-                    .testTag("btn_open_create_request"),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RescuePrimary)
-            ) {
-                Icon(Icons.Default.AddLocationAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Đặt Cứu Hộ", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-
-            OutlinedButton(
-                onClick = onShareLocation,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("btn_share_location"),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, BorderLight),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurfaceLight)
-            ) {
-                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Chia Sẻ GPS", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // ĐÈN CHỚP CẢNH BÁO SOS & CÒI CỨU NẠN (BAN ĐÊM / CAO TỐC)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable { showStrobeDialog = true }
-                .testTag("btn_open_emergency_strobe"),
+                .padding(horizontal = 14.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFFEF2F2),
-            border = BorderStroke(1.2.dp, Color(0xFFFECACA)),
-            shadowElevation = 1.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = AlertRed,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Đèn Chớp Hazard & Còi SOS Ban Đêm", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFF991B1B))
-                            Surface(shape = RoundedCornerShape(4.dp), color = AlertRed) {
-                                Text("CỨU NẠN", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
-                            }
-                        }
-                        Text("Phát đèn nhấp nháy báo hiệu & còi hú cứu nạn khi xe hỏng đêm trên cao tốc", fontSize = 10.5.sp, color = Color(0xFFB91C1C), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AlertRed
-                ) {
-                    Text("BẬT", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // YÊU CẦU CỨU HỘ GẦN ĐÂY (Tinh gọn, loại bỏ mô tả rườm rà)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             border = BorderStroke(1.dp, BorderLight),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -1249,8 +1034,8 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1260,49 +1045,49 @@ fun HomeScreen(
                     Text(
                         text = "HOẠT ĐỘNG GẦN ĐÂY",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Black,
-                        color = OnSurfaceLight
+                        fontWeight = FontWeight.Bold,
+                        color = OnSurfaceLight,
+                        fontSize = 12.5.sp
                     )
                     TextButton(
                         onClick = onNavigateToHistory,
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Text("Xem tất cả", color = RescuePrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(16.dp))
+                        Text("Xem tất cả", color = RescuePrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = RescuePrimary, modifier = Modifier.size(14.dp))
                     }
                 }
 
                 if (recentRequests.isEmpty()) {
-                    // Empty state gọn gàng, không tràn chữ
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Icon(
                             Icons.Default.CheckCircleOutline,
                             contentDescription = null,
                             tint = SafeGreen,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                         Text(
                             text = "Chưa có sự cố nào gần đây",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = OnSurfaceLight
                         )
                         Text(
-                            text = "Hệ thống sẵn sàng hỗ trợ bạn 24/7",
-                            fontSize = 11.sp,
+                            text = "Hệ thống sẵn sàng hỗ trợ bạn 24/7 khi cần",
+                            fontSize = 10.5.sp,
                             color = OnSurfaceVariantLight
                         )
                     }
                 } else {
                     recentRequests.take(3).forEach { req ->
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFF8FAFC),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1311,7 +1096,7 @@ fun HomeScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
+                                    .padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -1323,7 +1108,7 @@ fun HomeScreen(
                                         Text(
                                             text = req.issueType,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
+                                            fontSize = 12.sp,
                                             color = OnSurfaceLight
                                         )
                                         Surface(
@@ -1341,16 +1126,16 @@ fun HomeScreen(
                                                     AppConfig.RequestStatus.CANCELLED -> AlertRed
                                                     else -> RescuePrimary
                                                 },
-                                                fontSize = 10.sp,
+                                                fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                             )
                                         }
                                     }
 
                                     Text(
                                         text = "${req.vehicleType} • ${dateFormat.format(Date(req.timestamp))}",
-                                        fontSize = 11.sp,
+                                        fontSize = 10.sp,
                                         color = OnSurfaceVariantLight
                                     )
                                 }
@@ -1359,7 +1144,7 @@ fun HomeScreen(
                                     Icons.Default.ChevronRight,
                                     contentDescription = null,
                                     tint = OnSurfaceVariantLight,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                         }
@@ -1367,7 +1152,32 @@ fun HomeScreen(
                 }
             }
         }
+
+        // =====================================================================
+        // 8. BẢNG ĐIỀU PHỐI DÀNH RIÊNG CHO KTV / QUẢN TRỊ VIÊN (STAFF ONLY)
+        // =====================================================================
+        if (userProfile?.role == AppConfig.UserRole.STAFF) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                ServiceAvailabilityDashboard(
+                    services = serviceAvailability,
+                    isLoading = isServicesLoading,
+                    onRefresh = onRefreshServices,
+                    onRequestService = { item ->
+                        selectedIssueForDialog = item.issueType
+                        showCreateDialog = true
+                    },
+                    onToggleAvailability = onToggleServiceAvailability,
+                    onCallEmergencyHotline = { phone -> quickDial(phone) },
+                    isStaffUser = true
+                )
+            }
+        }
     }
+
+    // =========================================================================
+    // DIALOGS & OVERLAYS
+    // =========================================================================
 
     // SOS CONFIRMATION DIALOG
     if (showSosConfirmDialog) {

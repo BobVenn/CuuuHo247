@@ -584,7 +584,7 @@ fun CreateRequestDialog(
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Điều phối nhanh theo hồ sơ Firebase Auth",
+                                text = "Thông tin tài xế đã xác thực",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = SafeGreen

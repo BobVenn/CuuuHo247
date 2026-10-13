@@ -379,7 +379,7 @@ fun TechnicianScreen(
                         label = { Text("Nhận xét & Hướng dẫn kỹ thuật cho khách") },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3,
-                        supportingText = { Text("Lưu vào lịch sử cứu hộ trên Firebase để khách hàng theo dõi") }
+                        supportingText = { Text("Lưu vào hồ sơ cứu hộ để khách hàng theo dõi") }
                     )
                 }
             },

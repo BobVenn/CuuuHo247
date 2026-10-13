@@ -162,7 +162,7 @@ fun ServiceAvailabilityDashboard(
                         )
                     }
                     Text(
-                        text = "Trạng thái trực ban thời gian thực từ Firebase",
+                        text = "Trạng thái tiếp nhận trực ban theo thời gian thực",
                         style = MaterialTheme.typography.bodySmall,
                         color = OnSurfaceVariantLight,
                         fontSize = 11.5.sp
@@ -349,7 +349,7 @@ fun ServiceAvailabilityDashboard(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Chế độ điều phối: Bạn có thể bật/tắt trạng thái Sẵn sàng của từng dịch vụ bên dưới để kiểm tra đồng bộ Firebase Realtime.",
+                                text = "Chế độ điều phối: Bạn có thể cập nhật trạng thái Sẵn sàng của từng dịch vụ trực ban bên dưới.",
                                 fontSize = 11.sp,
                                 color = Color(0xFF92400E),
                                 lineHeight = 15.sp
@@ -711,7 +711,7 @@ fun ServiceAvailabilityCard(
                             modifier = Modifier.size(15.dp)
                         )
                         Text(
-                            text = "Ghi đè trạng thái trực ban (Firebase):",
+                            text = "Trạng thái trực ban:",
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = OnSurfaceLight
@@ -772,7 +772,7 @@ fun ServiceDetailDialog(
                         color = OnSurfaceLight
                     )
                     Text(
-                        text = "Trạng thái Firebase: ${if (item.isAvailable) "SẴN SÀNG" else "TẠM BẬN"}",
+                        text = "Trạng thái: ${if (item.isAvailable) "SẴN SÀNG TIẾP NHẬN" else "TẠM BẬN"}",
                         fontSize = 11.sp,
                         color = if (item.isAvailable) SafeGreen else AlertRed,
                         fontWeight = FontWeight.SemiBold

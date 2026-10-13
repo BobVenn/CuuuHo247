@@ -605,7 +605,7 @@ fun AuthScreen(
             title = { Text("Đặt Lại Mật Khẩu") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Nhập email đã đăng ký. Hệ thống Firebase sẽ gửi liên kết để bạn đặt lại mật khẩu mới.")
+                    Text("Nhập email đã đăng ký. Hệ thống sẽ gửi liên kết để bạn đặt lại mật khẩu mới.")
                     OutlinedTextField(
                         value = resetEmail,
                         onValueChange = { resetEmail = it },
